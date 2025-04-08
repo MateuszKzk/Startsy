@@ -1,8 +1,6 @@
 <template>
   <q-page class="flex flex-center" style="overflow: hidden; position: relative;">
-
     <div class="background" :class="{ blurred: isBlurred }"></div>
-
 
     <transition name="fade" mode="out-in">
       <q-card v-if="step === 1" class="q-pa-md card-style">
@@ -11,9 +9,8 @@
         </q-card-section>
         <q-card-section>
           <q-form @submit.prevent="register">
-
             <q-input
-              v-model="fullName"
+              v-model="full_name"
               label="Full Name"
               dark
               color="white"
@@ -23,7 +20,6 @@
               @focusout="toggleBlur(false)"
             />
             
-             
             <q-select
               v-model="role"
               :options="roleOptions"
@@ -93,14 +89,12 @@ import { useQuasar } from 'quasar';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import '../css/style.scss';
-
 export default {
   setup() {
     const $q = useQuasar();
     const router = useRouter();
     const step = ref(1);
-    const fullName = ref('');
+    const full_name = ref('');
     const username = ref('');
     const password = ref('');
     const confirmPassword = ref('');
@@ -109,41 +103,45 @@ export default {
     const isBlurred = ref(false);
 
     const register = async () => {
+  if (password.value !== confirmPassword.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'Passwords do not match. Please try again.',
+      position: 'top',
+    });
+    return;
+  }
 
-      if (password.value !== confirmPassword.value) {
-        $q.notify({
-          type: 'negative',
-          message: 'Passwords do not match. Please try again.',
-          position: 'top',
-        });
-        return;
-      }
+  try {
+    const response = await axios.post('http://localhost:5000/register', {
+      full_name: full_name.value,
+      username: username.value,
+      password: password.value,
+      role: role.value
+    });
 
-      try {
-        await axios.post('http://localhost:5000/register', {
-          fullName: fullName.value,
-          username: username.value,
-          password: password.value,
-          role: role.value
-        });
+    const token = response.data.token;
+    localStorage.setItem('auth_token', token); // <--- Token speichern
 
-        $q.notify({
-          type: 'positive',
-          message: 'Registration successful! Redirecting to login...',
-          position: 'top',
-        });
+    $q.notify({
+      type: 'positive',
+      message: 'Registration successful! Redirecting...',
+      position: 'top',
+    });
 
-        setTimeout(() => {
-          router.push('/login');
-        }, 1500);
-      } catch {
-        $q.notify({
-          type: 'negative',
-          message: 'Registration failed. Please try again.',
-          position: 'top',
-        });
-      }
-    };
+    setTimeout(() => {
+      router.push({ name: 'home' });
+    }, 1500);
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+    $q.notify({
+      type: 'negative',
+      message: errorMessage,
+      position: 'top',
+    });
+  }
+};
+
 
     const forgotPassword = () => {
       router.push('/forgot-password');
@@ -159,7 +157,7 @@ export default {
 
     return {
       step,
-      fullName,
+      full_name,
       username,
       password,
       confirmPassword,
@@ -174,3 +172,47 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.card-style {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  border-radius: 10px;
+}
+
+.background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('/images/wp12482965.jpg') no-repeat center center;
+  background-size: cover;
+  transition: filter 0.3s ease;
+}
+
+.background.blurred {
+  filter: blur(5px);
+}
+
+.modern-btn {
+  background: linear-gradient(45deg, #2196F3, #00BCD4);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px;
+  font-weight: bold;
+}
+
+.text-button {
+  color: #2196F3 !important;
+}
+
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+</style>
