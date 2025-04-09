@@ -112,7 +112,11 @@
               <div class="text-h5">{{ selectedStartup.name }}</div>
               <q-space />
               <q-btn icon="close" flat round dense v-close-popup />
-              <q-btn v-if="selectedStartup.founder_id === currentUser.id" icon="delete" color="negative" flat round @click="confirmDeleteStartup" />
+              <q-btn v-if="isCurrentUserFounder" 
+       icon="delete" 
+       color="negative" 
+       flat round 
+       @click="confirmDeleteStartup" />
             </q-card-section>
 
             <q-separator />
@@ -207,7 +211,35 @@ export default {
     const showDetailsDialog = ref(false);
     const selectedStartup = ref({});
     const startups = ref([]);
-    const currentUser = ref({ id: 1 });  // This should come from the auth system
+    const currentUser = ref(null);
+
+onMounted(async () => {
+  await loadUser();
+  fetchStartups();
+});
+
+const loadUser = async () => {
+  try {
+    const response = await axios.get('/me');
+    currentUser.value = response.data;
+    localStorage.setItem('user', JSON.stringify(response.data));
+  } catch (error) {
+    console.log(error);
+    logout();
+  }
+};
+
+// Axios Request Interceptor hinzufügen
+axios.interceptors.request.use(config => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+  // ID aus localStorage holen
+
+  
     
     // Form
     const form = ref({
@@ -251,6 +283,11 @@ export default {
       });
     });
 
+const isCurrentUserFounder = computed(() => {
+  return selectedStartup.value.founder_id && currentUser.value.id
+    ? Number(selectedStartup.value.founder_id) === Number(currentUser.value.id)
+    : false;
+});
     // Axios Config
     axios.defaults.baseURL = 'http://localhost:5000/';
     axios.defaults.headers.common['Content-Type'] = 'application/json';
@@ -322,9 +359,11 @@ export default {
     };
 
     const openStartupDetails = (startup) => {
-      selectedStartup.value = startup;
-      showDetailsDialog.value = true;
-    };
+  console.log('Startup Founder ID:', startup.founder_id, typeof startup.founder_id);
+  console.log('Current User ID:', currentUser.value.id, typeof currentUser.value.id);
+  selectedStartup.value = startup;
+  showDetailsDialog.value = true;
+};
 
     const confirmDeleteStartup = () => {
       $q.dialog({
@@ -339,7 +378,7 @@ export default {
 
     const deleteStartup = async () => {
   try {
-    const response = await axios.delete(`/api/startups/${selectedStartup.value.id}`);
+    const response = await axios.delete(`/startups/${selectedStartup.value.id}`);
     
     $q.notify({
       type: 'positive',
@@ -411,7 +450,8 @@ export default {
       contactFounder,
       goToSettings,
       goToProfile,
-      logout
+      logout,
+      isCurrentUserFounder
     };
   }
 };
@@ -421,6 +461,7 @@ export default {
 .ellipsis-3-lines {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp:3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;

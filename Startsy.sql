@@ -575,4 +575,3 @@ ALTER TABLE ONLY public.startups
 --
 -- PostgreSQL database dump complete
 --
-

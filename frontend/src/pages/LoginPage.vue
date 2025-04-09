@@ -72,7 +72,7 @@ export default {
         
         // Speichern des Tokens im localStorage
         localStorage.setItem('auth_token', token);
-        localStorage.setItem('username', response.data.user.username); // optional
+       localStorage.setItem('user', JSON.stringify(response.data.user));
 
         // Setze den Authorization-Header für Axios-Anfragen
         axios.defaults.headers['Authorization'] = `Bearer ${token}`;

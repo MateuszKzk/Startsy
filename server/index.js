@@ -93,6 +93,7 @@ app.post('/login', async (req, res) => {
     }
 
     // JWT Token erstellen
+    console.log('User Data:', user);  // Debug: Überprüfe, was im user-Objekt enthalten ist
     const token = jwt.sign(
       { 
         userId: user.id, 
@@ -102,6 +103,8 @@ app.post('/login', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '1h' }
     );
+
+    console.log('Generated Token:', token);  // Debug: Überprüfe den generierten Token
 
     res.status(200).json({
       message: 'Login successful',
@@ -118,6 +121,7 @@ app.post('/login', async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
+
 
 // Startup erstellen (geschützt mit JWT)
 app.post('/startups', authenticateToken, async (req, res) => {
@@ -191,6 +195,19 @@ app.post('/startups/:id/join', authenticateToken, async (req, res) => {
   }
 });
 
+app.get('/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await pool.query('SELECT id, username, role, full_name FROM users WHERE id = $1', [req.user.userId]);
+    if (user.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(user.rows[0]);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
 // Benutzers Startups abrufen
 app.get('/users/:id/startups', authenticateToken, async (req, res) => {
   const userId = req.params.id;
@@ -232,33 +249,26 @@ app.get('/startups', async (req, res) => {
 
 // Startup löschen (nur Gründer oder Admin)
 app.delete('/startups/:id', authenticateToken, async (req, res) => {
-  const startupId = req.params.id;
-  const userId = req.user.userId;
-  const userRole = req.user.role;
-
   try {
-    // Erst prüfen ob das Startup existiert
-    const startup = await pool.query('SELECT * FROM startups WHERE id = $1', [startupId]);
-    
+    // 1. Verify startup exists
+    const startup = await pool.query('SELECT founder_id FROM startups WHERE id = $1', [req.params.id]);
     if (startup.rows.length === 0) {
       return res.status(404).json({ message: 'Startup not found' });
     }
 
-    // Berechtigung prüfen (nur Gründer oder Admin darf löschen)
-    if (startup.rows[0].founder_id !== userId && userRole !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized to delete this startup' });
+    // 2. Verify ownership (with explicit type conversion)
+    if (Number(startup.rows[0].founder_id) !== Number(req.user.userId)) {
+      return res.status(403).json({ message: 'Only the founder can delete this startup' });
     }
 
-    // Zuerst die Mitglieder-Beziehungen löschen
-    await pool.query('DELETE FROM startup_members WHERE startup_id = $1', [startupId]);
+    // 3. Perform deletion
+    await pool.query('DELETE FROM startup_members WHERE startup_id = $1', [req.params.id]);
+    await pool.query('DELETE FROM startups WHERE id = $1', [req.params.id]);
     
-    // Dann das Startup selbst löschen
-    await pool.query('DELETE FROM startups WHERE id = $1', [startupId]);
-    
-    res.status(200).json({ message: 'Startup deleted successfully' });
+    res.json({ message: 'Startup deleted successfully' });
   } catch (err) {
-    console.error('Error deleting startup:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('Delete error:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
