@@ -141,7 +141,8 @@ ALTER SEQUENCE public.notifications_id_seq OWNED BY public.notifications.id;
 
 CREATE TABLE public.skills (
     id integer NOT NULL,
-    name character varying(255) NOT NULL
+    name character varying(255) NOT NULL,
+    category character varying(50)
 );
 
 
@@ -332,31 +333,101 @@ COPY public.notifications (id, user_id, message, created_at, is_read) FROM stdin
 -- Data for Name: skills; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.skills (id, name) FROM stdin;
-1	HTML
-2	CSS
-3	JavaScript
-4	React
-5	Node.js
-6	Python
-7	Django
-8	MongoDB
-9	SQL
-10	Docker
-11	Kubernetes
-12	Git
-13	HTML
-14	CSS
-15	JavaScript
-16	React
-17	Node.js
-18	Python
-19	Django
-20	MongoDB
-21	SQL
-22	Docker
-23	Kubernetes
-24	Git
+COPY public.skills (id, name, category) FROM stdin;
+1	HTML	Web Development
+2	CSS	Web Development
+3	JavaScript	Web Development
+4	TypeScript	Web Development
+5	React	Web Development
+6	Vue.js	Web Development
+7	Angular	Web Development
+8	Svelte	Web Development
+9	Node.js	Web Development
+10	Express.js	Web Development
+11	Django	Web Development
+12	Flask	Web Development
+13	Ruby on Rails	Web Development
+14	Laravel	Web Development
+15	PHP	Web Development
+16	ASP.NET	Web Development
+17	GraphQL	Web Development
+18	REST APIs	Web Development
+19	WebSockets	Web Development
+20	Webpack	Web Development
+21	Vite	Web Development
+22	Bootstrap	Web Development
+23	Tailwind CSS	Web Development
+24	SASS/SCSS	Web Development
+25	jQuery	Web Development
+26	Python	Backend
+27	Java	Backend
+28	C#	Backend
+29	Go (Golang)	Backend
+30	Rust	Backend
+31	Kotlin	Backend
+32	SQL	Database
+33	PostgreSQL	Database
+34	MySQL	Database
+35	MongoDB	Database
+36	Redis	Database
+37	Firebase	Database
+38	Supabase	Database
+39	Prisma	Database
+40	Docker	DevOps
+41	Kubernetes	DevOps
+42	AWS	DevOps
+43	Azure	DevOps
+44	Google Cloud	DevOps
+45	CI/CD	DevOps
+46	NGINX	DevOps
+47	Apache	DevOps
+48	Microservices	Backend
+49	Serverless	Backend
+50	Spring Boot	Backend
+51	Swift	Mobile
+52	Kotlin (Android)	Mobile
+53	Flutter	Mobile
+54	React Native	Mobile
+55	Ionic	Mobile
+56	Xamarin	Mobile
+57	Android SDK	Mobile
+58	iOS Development	Mobile
+59	Python (Data Science)	Data Science
+60	R	Data Science
+61	TensorFlow	AI/ML
+62	PyTorch	AI/ML
+63	Pandas	Data Science
+64	NumPy	Data Science
+65	Scikit-learn	AI/ML
+66	OpenCV	AI/ML
+67	NLP	AI/ML
+68	Data Visualization	Data Science
+69	Big Data	Data Science
+70	Hadoop	Data Science
+71	Spark	Data Science
+72	Tableau	Data Science
+73	Power BI	Data Science
+74	Linux	Systems
+75	Bash/Shell	Systems
+76	Git	Version Control
+77	Blockchain	Emerging Tech
+78	Solidity	Emerging Tech
+79	Cybersecurity	Security
+80	Ethical Hacking	Security
+81	Quantum Computing	Emerging Tech
+82	IoT	Embedded Systems
+83	Arduino	Embedded Systems
+84	Raspberry Pi	Embedded Systems
+85	Unity	Game Dev
+86	Unreal Engine	Game Dev
+87	C++	Game Dev
+88	C# (Game Dev)	Game Dev
+89	OpenGL	Game Dev
+90	DirectX	Game Dev
+91	Godot	Game Dev
+92	Game Design	Game Dev
+93	Blender	Game Dev
+94	3D Modeling	Game Dev
 \.
 
 
@@ -365,7 +436,7 @@ COPY public.skills (id, name) FROM stdin;
 --
 
 COPY public.startup_members (startup_id, user_id, joined_at) FROM stdin;
-24	2	2025-04-08 20:38:12.766376
+51	2	2025-04-09 21:42:35.31358
 \.
 
 
@@ -374,7 +445,7 @@ COPY public.startup_members (startup_id, user_id, joined_at) FROM stdin;
 --
 
 COPY public.startups (id, founder_id, name, description, required_skills, contact_info, created_at, color) FROM stdin;
-24	2	Fortnite event	123	{"9","8","7"}	deimel.k20@htlwienwest.at	2025-04-08 20:38:12.764944	#e1bee7
+51	2			{}		2025-04-09 21:42:35.312787	#e1bee7
 \.
 
 
@@ -413,14 +484,14 @@ SELECT pg_catalog.setval('public.notifications_id_seq', 1, false);
 -- Name: skills_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.skills_id_seq', 24, true);
+SELECT pg_catalog.setval('public.skills_id_seq', 94, true);
 
 
 --
 -- Name: startups_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.startups_id_seq', 24, true);
+SELECT pg_catalog.setval('public.startups_id_seq', 51, true);
 
 
 --
@@ -575,3 +646,4 @@ ALTER TABLE ONLY public.startups
 --
 -- PostgreSQL database dump complete
 --
+
