@@ -125,7 +125,8 @@
               <div class="row q-col-gutter-md">
                 <div class="col-7">
                   <div class="text-subtitle1 q-mb-sm">Description</div>
-                  <p class="text-body1">{{ selectedStartup.description }}</p>
+                  <p class="text-body1 description-scroll">{{ selectedStartup.description }}</p>
+
 
                   <div class="text-subtitle1 q-mt-md q-mb-sm">Required Skills</div>
                   <div class="q-gutter-sm">
@@ -471,4 +472,31 @@ const isCurrentUserFounder = computed(() => {
 .q-card__section--vert {
   padding: 16px;
 }
+
+.text-dark:hover{
+
+  filter: brightness(0.9);
+  transition: 0.3s ease-in-out;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  transform: scale(1.02);
+
+}
+
+.text-dark{
+  transition: 0.275s ease-in-out;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  transform: scale(1);
+  filter: brightness(1);
+}
+
+.description-scroll {
+  max-height: 120px; /* Oder was für deine UI passt */
+  overflow-y: auto;
+  padding-right: 4px; /* Platz für Scrollbar */
+}
+
 </style>
