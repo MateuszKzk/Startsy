@@ -1,86 +1,97 @@
 <template>
-  <q-page class="flex flex-center" style="overflow: hidden; position: relative;">
-    <div class="background" :class="{ blurred: isBlurred }"></div>
+  <q-layout view="lHh Lpr lFf">
+    <q-header elevated class="bg-primary">
+      <q-toolbar>
+        <q-toolbar-title class="text-white">Startsy</q-toolbar-title>
+      </q-toolbar>
+    </q-header>
 
-    <transition name="fade" mode="out-in">
-      <q-card v-if="step === 1" class="q-pa-md card-style">
-        <q-card-section>
-          <h2 class="text-h5 text-white text-center">Register</h2>
-        </q-card-section>
-        <q-card-section>
-          <q-form @submit.prevent="register">
-            <q-input
-              v-model="full_name"
-              label="Full Name"
-              dark
-              color="white"
-              class="q-mb-sm"
-              required
-              @focusin="toggleBlur(true)"
-              @focusout="toggleBlur(false)"
-            />
-            
-            <q-select
-              v-model="role"
-              :options="roleOptions"
-              label="Role"
-              dark
-              color="white"
-              class="q-mb-sm"
-              required
-              @focusin="toggleBlur(true)"
-              @focusout="toggleBlur(false)"
-            />
-   
-            <q-input
-              v-model="username"
-              label="Username"
-              dark
-              color="white"
-              class="q-mb-sm"
-              required
-              @focusin="toggleBlur(true)"
-              @focusout="toggleBlur(false)"
-            />
+    <q-page-container>
+      <q-page class="flex flex-center q-pa-md">
+        <div class="background" :class="{ blurred: isBlurred }"></div>
 
-            <q-input
-              v-model="password"
-              label="Password"
-              type="password"
-              dark
-              color="white"
-              class="q-mb-sm"
-              required
-              @focusin="toggleBlur(true)"
-              @focusout="toggleBlur(false)"
-            />
+        <q-card class="q-pa-md card-style" :class="{ 'q-mt-md': isMobile }">
+          <q-card-section>
+            <h2 class="text-h5 text-white text-center">Register</h2>
+          </q-card-section>
 
-            <q-input
-              v-model="confirmPassword"
-              label="Confirm Password"
-              type="password"
-              dark
-              color="white"
-              class="q-mb-sm"
-              required
-              @focusin="toggleBlur(true)"
-              @focusout="toggleBlur(false)"
-              :rules="[val => val === password || 'Passwords do not match']"
-              bottom-slots
-              :error="password !== confirmPassword"
-              error-message="Passwords do not match"
-            />
-           
-            <q-btn type="submit" class="modern-btn full-width q-mt-sm" label="Register" />
-          </q-form>
-          <div class="auth-links">
-            <q-btn flat label="Forgot your password?" class="text-button" @click="forgotPassword" />
-            <q-btn flat label="Already have an account?" class="text-button" @click="goToLogin" />
-          </div>
-        </q-card-section>
-      </q-card>
-    </transition>
-  </q-page>
+          <q-card-section>
+            <q-form @submit.prevent="register">
+              <q-input
+                v-model="full_name"
+                label="Full Name"
+                dark
+                color="white"
+                class="q-mb-sm"
+                required
+                dense
+                @focusin="toggleBlur(true)"
+                @focusout="toggleBlur(false)"
+              />
+
+              <q-select
+                v-model="role"
+                :options="roleOptions"
+                label="Role"
+                dark
+                color="white"
+                class="q-mb-sm"
+                required
+                dense
+                @focusin="toggleBlur(true)"
+                @focusout="toggleBlur(false)"
+              />
+
+              <q-input
+                v-model="username"
+                label="Username"
+                dark
+                color="white"
+                class="q-mb-sm"
+                required
+                dense
+                @focusin="toggleBlur(true)"
+                @focusout="toggleBlur(false)"
+              />
+
+              <q-input
+                v-model="password"
+                label="Password"
+                type="password"
+                dark
+                color="white"
+                class="q-mb-sm"
+                required
+                dense
+                @focusin="toggleBlur(true)"
+                @focusout="toggleBlur(false)"
+              />
+
+              <q-input
+                v-model="confirmPassword"
+                label="Confirm Password"
+                type="password"
+                dark
+                color="white"
+                class="q-mb-sm"
+                required
+                dense
+                :rules="[val => val === password || 'Passwords do not match']"
+                @focusin="toggleBlur(true)"
+                @focusout="toggleBlur(false)"
+              />
+
+              <q-btn type="submit" class="modern-btn full-width q-mt-sm" label="Register" />
+            </q-form>
+
+            <div class="auth-links q-mt-sm">
+              <q-btn flat label="Already have an account?" class="text-button" @click="goToLogin" />
+            </div>
+          </q-card-section>
+        </q-card>
+      </q-page>
+    </q-page-container>
+  </q-layout>
 </template>
 
 <script>
@@ -93,7 +104,6 @@ export default {
   setup() {
     const $q = useQuasar();
     const router = useRouter();
-    const step = ref(1);
     const full_name = ref('');
     const username = ref('');
     const password = ref('');
@@ -101,50 +111,44 @@ export default {
     const role = ref('');
     const roleOptions = ['Mitstreiter', 'Gründer'];
     const isBlurred = ref(false);
+    const isMobile = $q.screen.lt.md;
 
     const register = async () => {
-  if (password.value !== confirmPassword.value) {
-    $q.notify({
-      type: 'negative',
-      message: 'Passwords do not match. Please try again.',
-      position: 'top',
-    });
-    return;
-  }
+      if (password.value !== confirmPassword.value) {
+        $q.notify({
+          type: 'negative',
+          message: 'Passwords do not match. Please try again.',
+          position: 'top',
+        });
+        return;
+      }
 
-  try {
-    const response = await axios.post('http://localhost:5000/register', {
-      full_name: full_name.value,
-      username: username.value,
-      password: password.value,
-      role: role.value
-    });
+      try {
+        const response = await axios.post('http://localhost:5000/register', {
+          full_name: full_name.value,
+          username: username.value,
+          password: password.value,
+          role: role.value
+        });
 
-    const token = response.data.token;
-    localStorage.setItem('auth_token', token); // <--- Token speichern
+        const token = response.data.token;
+        localStorage.setItem('auth_token', token);
 
-    $q.notify({
-      type: 'positive',
-      message: 'Registration successful! Redirecting...',
-      position: 'top',
-    });
+        $q.notify({
+          type: 'positive',
+          message: 'Account created successfully!',
+          position: 'top',
+        });
 
-    setTimeout(() => {
-      router.push({ name: 'home' });
-    }, 1500);
-  } catch (error) {
-    const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
-    $q.notify({
-      type: 'negative',
-      message: errorMessage,
-      position: 'top',
-    });
-  }
-};
-
-
-    const forgotPassword = () => {
-      router.push('/forgot-password');
+        router.push('/login');
+      } catch (error) {
+        const errorMessage = error.response?.data?.message || 'Registration failed.';
+        $q.notify({
+          type: 'negative',
+          message: errorMessage,
+          position: 'top',
+        });
+      }
     };
 
     const goToLogin = () => {
@@ -156,7 +160,6 @@ export default {
     };
 
     return {
-      step,
       full_name,
       username,
       password,
@@ -164,10 +167,10 @@ export default {
       role,
       roleOptions,
       isBlurred,
+      isMobile,
       register,
-      forgotPassword,
       goToLogin,
-      toggleBlur
+      toggleBlur,
     };
   },
 };
@@ -191,6 +194,7 @@ export default {
   background: url('/images/wp12482965.jpg') no-repeat center center;
   background-size: cover;
   transition: filter 0.3s ease;
+  z-index: -1;
 }
 
 .background.blurred {
@@ -212,7 +216,13 @@ export default {
 
 .auth-links {
   display: flex;
-  justify-content: space-between;
-  margin-top: 20px;
+  justify-content: center;
+}
+
+@media (max-width: 600px) {
+  .card-style {
+    max-width: 100%;
+    padding: 20px;
+  }
 }
 </style>

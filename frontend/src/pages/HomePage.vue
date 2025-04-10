@@ -3,32 +3,76 @@
     <!-- Header -->
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
-        <q-toolbar-title class="text-left q-pl-md">Startsy</q-toolbar-title>
+        <!-- Logo/Link zur Startseite -->
+        <q-btn 
+          flat 
+          dense 
+          to="/home" 
+          class="q-mr-sm"
+        >
+          <q-toolbar-title class="text-left">
+            <q-icon name="rocket" size="md" class="q-mr-sm" />
+            Startsy
+          </q-toolbar-title>
+        </q-btn>
+
         <q-space />
-        <q-tabs align="center">
-          <q-tab label="Home" to="/home" />
-          <q-tab label="Startups" to="/startups" />
-          <q-tab label="About Us" to="/about" />
+
+        <!-- Hauptnavigation -->
+        <q-tabs v-model="tab" shrink stretch>
+          <q-route-tab 
+            exact
+            name="home" 
+            label="Home" 
+            to="/home" 
+            icon="home"
+          />
+          <q-route-tab 
+            name="startups" 
+            label="Startups" 
+            to="/startups" 
+            icon="business"
+          />
+          <q-route-tab 
+            name="about" 
+            label="About" 
+            to="/about" 
+            icon="info"
+          />
         </q-tabs>
+
         <q-space />
-        <q-btn-dropdown flat color="white" icon="menu">
+
+        <!-- User-Menü mit Dropdown -->
+        <q-btn-dropdown flat stretch icon="person" :label="userInitials">
           <q-list>
-            <q-item clickable @click="goToSettings">
-              <q-item-section avatar><q-icon name="settings" /></q-item-section>
-              <q-item-section>Settings</q-item-section>
-            </q-item>
-            <q-item clickable @click="goToProfile">
-              <q-item-section avatar><q-icon name="person" /></q-item-section>
+            <q-item clickable v-close-popup to="/profile">
+              <q-item-section avatar>
+                <q-icon name="account_circle" />
+              </q-item-section>
               <q-item-section>My Profile</q-item-section>
             </q-item>
-            <q-item clickable @click="logout">
-              <q-item-section avatar><q-icon name="logout" /></q-item-section>
-              <q-item-section>Logout</q-item-section>
+
+            <q-item clickable v-close-popup to="/settings">
+              <q-item-section avatar>
+                <q-icon name="settings" />
+              </q-item-section>
+              <q-item-section>Settings</q-item-section>
+            </q-item>
+
+            <q-separator />
+
+            <q-item clickable v-close-popup @click="logout">
+              <q-item-section avatar>
+                <q-icon name="logout" color="negative" />
+              </q-item-section>
+              <q-item-section class="text-negative">Logout</q-item-section>
             </q-item>
           </q-list>
         </q-btn-dropdown>
       </q-toolbar>
     </q-header>
+
 
     <!-- Page Content -->
     <q-page-container>
