@@ -1,24 +1,23 @@
 import { route } from 'quasar/wrappers'
 import { createRouter, createWebHistory } from 'vue-router'
 
-import TitlePage from 'src/pages/TitlePage.vue'
+import HomePage from 'src/pages/HomePage.vue'
 import LoginPage from 'src/pages/LoginPage.vue'
 import RegisterPage from 'src/pages/RegisterPage.vue'
-import HomePage from 'src/pages/HomePage.vue'
+import Dashboard from 'src/pages/DashboardPage.vue'
 import AboutUsPage from 'src/pages/AboutUsPage.vue'
 import StartUpsPage from 'src/pages/StartUpsPage.vue'
-import SettingsPage from 'src/pages/SettingsPage.vue'
 
 const routes = [
   {
     path: '/',
-    name: 'title',
-    component: TitlePage
+    name: 'home',
+    component: HomePage
   },
   {
-    path: '/home',
-    name: 'home',
-    component: HomePage,
+    path: '/dashboard',
+    name: 'dashboard',
+    component: Dashboard,
     meta: { requiresAuth: true }
   },
   {
@@ -26,12 +25,6 @@ const routes = [
     name: 'startups',
     component: StartUpsPage,
     meta: { requiresAuth: true, title: 'Meine Startups' }
-  },
-  {
-    path: '/settings',
-    name: 'settings',
-    component: SettingsPage,
-    meta: { requiresAuth: true, title: 'Einstellungen' }
   },
   {
     path: '/about',
@@ -50,7 +43,25 @@ const routes = [
     name: 'register',
     component: RegisterPage,
     meta: { guestOnly: true }
+  },
+    
+  {
+    path: '/settings',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'settings',
+        component: () => import('pages/SettingsPage.vue'),
+        meta: { requiresAuth: true, title: 'Einstellungen' }
+      }
+    ]
   }
+  
+  
+  
+  
+  
 ]
 
 export default route(function () {
@@ -67,16 +78,14 @@ export default route(function () {
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
     const guestOnly = to.matched.some(record => record.meta.guestOnly)
 
-    // Setze den Seitentitel
     document.title = to.meta.title ? `${to.meta.title} | Startsy` : 'Startsy'
 
-    // Auth-Prüfung
     if (requiresAuth && !isAuthenticated) {
       return next({ name: 'login', query: { redirect: to.fullPath } })
     }
 
     if (guestOnly && isAuthenticated) {
-      return next({ name: 'home' })  // Weiterleitung für authentifizierte Benutzer zu 'home'
+      return next({ name: 'dashboard' })  // Weiterleitung für authentifizierte Benutzer zu 'home'
     }
 
     next()

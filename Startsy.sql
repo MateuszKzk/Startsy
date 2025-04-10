@@ -17,6 +17,22 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: update_timestamp(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_timestamp() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.update_timestamp() OWNER TO postgres;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -224,6 +240,20 @@ ALTER SEQUENCE public.startups_id_seq OWNED BY public.startups.id;
 
 
 --
+-- Name: user_settings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.user_settings (
+    user_id integer NOT NULL,
+    dark_mode boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.user_settings OWNER TO postgres;
+
+--
 -- Name: users; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -234,7 +264,6 @@ CREATE TABLE public.users (
     role character varying(20) NOT NULL,
     full_name character varying(100),
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    darkmode boolean DEFAULT false,
     CONSTRAINT users_role_check CHECK (((role)::text = ANY ((ARRAY['Gründer'::character varying, 'Mitstreiter'::character varying])::text[])))
 );
 
@@ -436,7 +465,6 @@ COPY public.skills (id, name, category) FROM stdin;
 --
 
 COPY public.startup_members (startup_id, user_id, joined_at) FROM stdin;
-51	2	2025-04-09 21:42:35.31358
 \.
 
 
@@ -445,7 +473,19 @@ COPY public.startup_members (startup_id, user_id, joined_at) FROM stdin;
 --
 
 COPY public.startups (id, founder_id, name, description, required_skills, contact_info, created_at, color) FROM stdin;
-51	2			{}		2025-04-09 21:42:35.312787	#e1bee7
+\.
+
+
+--
+-- Data for Name: user_settings; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.user_settings (user_id, dark_mode, created_at, updated_at) FROM stdin;
+1	t	2025-04-10 17:36:11.87293+02	2025-04-10 17:36:11.87293+02
+4	f	2025-04-10 18:06:49.265601+02	2025-04-10 18:06:49.265601+02
+5	f	2025-04-10 21:37:11.066184+02	2025-04-10 21:37:11.066184+02
+2	f	2025-04-10 21:44:09.663104+02	2025-04-10 21:44:19.268353+02
+6	f	2025-04-10 22:34:31.881925+02	2025-04-10 22:34:31.881925+02
 \.
 
 
@@ -453,9 +493,13 @@ COPY public.startups (id, founder_id, name, description, required_skills, contac
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.users (id, username, password_hash, role, full_name, created_at, darkmode) FROM stdin;
-1	MatiK	$2b$10$0mp2UTNEX9lQcjlBfjaBUuXtnHcsOnsXSxnSPvwUDU4ifhgF8gWOS	Gründer	Mateusz Kuzniak	2025-04-08 18:55:49.142591	f
-2	kevde	$2b$10$HAZBj0trHp5bIAhZATpr6.a0/tNjB2oxtu/STofqDUjqUTHBgY7CO	Mitstreiter	Kevin Deimel	2025-04-08 20:37:38.002001	f
+COPY public.users (id, username, password_hash, role, full_name, created_at) FROM stdin;
+1	MatiK	$2b$10$0mp2UTNEX9lQcjlBfjaBUuXtnHcsOnsXSxnSPvwUDU4ifhgF8gWOS	Gründer	Mateusz Kuzniak	2025-04-08 18:55:49.142591
+2	kevde	$2b$10$HAZBj0trHp5bIAhZATpr6.a0/tNjB2oxtu/STofqDUjqUTHBgY7CO	Mitstreiter	Kevin Deimel	2025-04-08 20:37:38.002001
+3	1234	$2b$10$DImC49CKBf4srlnHrKh/aemz8D/5OzkbwS.6qf7/I59nFQGaMvdIi	Mitstreiter	matik	2025-04-10 17:59:28.162402
+4	test1	$2b$10$g85DEYKm85xuHUBc6lyaYewDdO47aOfWCXoShX2bpUdPmaHovIRba	Mitstreiter	876867876	2025-04-10 18:06:49.26456
+5	34	$2b$10$znlYl0ifPOLE9QqWIVH/YekFQER7ARQxDm9Ue7V.rzyWSpUXNrU6i	Mitstreiter	534	2025-04-10 21:37:11.064211
+6	test123	$2b$10$W9JaZ8XlYQUs7U3ppbkMcux3V.QFp983BxuSjU.sPxD2u48D2RLk2	Mitstreiter	test test	2025-04-10 22:34:31.880959
 \.
 
 
@@ -491,14 +535,14 @@ SELECT pg_catalog.setval('public.skills_id_seq', 94, true);
 -- Name: startups_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.startups_id_seq', 51, true);
+SELECT pg_catalog.setval('public.startups_id_seq', 52, true);
 
 
 --
 -- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_id_seq', 2, true);
+SELECT pg_catalog.setval('public.users_id_seq', 6, true);
 
 
 --
@@ -550,6 +594,14 @@ ALTER TABLE ONLY public.startups
 
 
 --
+-- Name: user_settings user_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_settings
+    ADD CONSTRAINT user_settings_pkey PRIMARY KEY (user_id);
+
+
+--
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -577,6 +629,13 @@ CREATE INDEX idx_startup_members_startup ON public.startup_members USING btree (
 --
 
 CREATE INDEX idx_startup_members_user ON public.startup_members USING btree (user_id);
+
+
+--
+-- Name: user_settings update_user_settings_timestamp; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER update_user_settings_timestamp BEFORE UPDATE ON public.user_settings FOR EACH ROW EXECUTE FUNCTION public.update_timestamp();
 
 
 --
@@ -641,6 +700,14 @@ ALTER TABLE ONLY public.startup_members
 
 ALTER TABLE ONLY public.startups
     ADD CONSTRAINT startups_founder_id_fkey FOREIGN KEY (founder_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_settings user_settings_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.user_settings
+    ADD CONSTRAINT user_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 
 
 --

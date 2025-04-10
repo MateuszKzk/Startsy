@@ -8,14 +8,11 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const port = 5000;
 
-// JWT Secret Key (in production use environment variable)
 const JWT_SECRET = 'your_very_secret_key_here';
 
-// Middlewares
 app.use(cors());
 app.use(bodyParser.json());
 
-// PostgreSQL-Datenbankverbindung
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
@@ -24,15 +21,23 @@ const pool = new Pool({
   port: 5432,
 });
 
-// JWT Authentication Middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
   
-  if (!token) return res.status(401).json({ message: 'Missing token' });
+  if (!token) {
+    console.log('No token provided');
+    return res.status(401).json({ message: 'Authorization token required' });
+  }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ message: 'Invalid token' });
+    if (err) {
+      console.log('Token verification failed:', err.message);
+      return res.status(403).json({ 
+        message: 'Invalid or expired token',
+        error: err.message 
+      });
+    }
     req.user = user;
     next();
   });
@@ -40,7 +45,6 @@ const authenticateToken = (req, res, next) => {
 
 module.exports = authenticateToken;
 
-// Benutzerregistrierung
 app.post('/register', async (req, res) => {
   const { username, password, role, full_name } = req.body;
 
@@ -57,6 +61,13 @@ app.post('/register', async (req, res) => {
     );
 
     const user = result.rows[0];
+    
+    await pool.query(
+      'INSERT INTO user_settings (user_id, dark_mode) VALUES ($1, $2)',
+      [user.id, false]
+    );
+
+
     const token = jwt.sign(
       { userId: user.id, username: user.username, role: user.role },
       JWT_SECRET,
@@ -75,7 +86,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// Benutzerlogin
 app.post('/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -92,8 +102,7 @@ app.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Incorrect password' });
     }
 
-    // JWT Token erstellen
-    console.log('User Data:', user);  // Debug: Überprüfe, was im user-Objekt enthalten ist
+    console.log('User Data:', user);
     const token = jwt.sign(
       { 
         userId: user.id, 
@@ -101,10 +110,10 @@ app.post('/login', async (req, res) => {
         role: user.role 
       }, 
       JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '6h' }
     );
 
-    console.log('Generated Token:', token);  // Debug: Überprüfe den generierten Token
+    console.log('Generated Token:', token);
 
     res.status(200).json({
       message: 'Login successful',
@@ -123,10 +132,9 @@ app.post('/login', async (req, res) => {
 });
 
 
-// Startup erstellen (geschützt mit JWT)
 app.post('/startups', authenticateToken, async (req, res) => {
   const { name, description, required_skills, contact_info, color } = req.body;
-  const founderId = req.user.userId;  // Aus dem JWT Token
+  const founderId = req.user.userId;
 
   try {
     const result = await pool.query(`
@@ -135,7 +143,6 @@ app.post('/startups', authenticateToken, async (req, res) => {
       [name, description, required_skills, contact_info, founderId, color || '#ffffff']
     );
 
-    // Gründer automatisch als Mitglied hinzufügen
     await pool.query('INSERT INTO startup_members (startup_id, user_id) VALUES ($1, $2)', 
       [result.rows[0].id, founderId]);
 
@@ -146,7 +153,6 @@ app.post('/startups', authenticateToken, async (req, res) => {
   }
 });
 
-// Skills abrufen
 app.get('/api/skills', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM skills');
@@ -156,14 +162,11 @@ app.get('/api/skills', async (req, res) => {
   }
 });
 
-// Startup beitreten
-// Startup beitreten (mit JWT Authentifizierung)
 app.post('/startups/:id/join', authenticateToken, async (req, res) => {
   const startupId = req.params.id;
-  const userId = req.user.userId; // Aus dem JWT Token
+  const userId = req.user.userId;
 
   try {
-    // Überprüfen, ob der Benutzer bereits Mitglied ist
     const existingMember = await pool.query(
       'SELECT * FROM startup_members WHERE startup_id = $1 AND user_id = $2',
       [startupId, userId]
@@ -173,13 +176,11 @@ app.post('/startups/:id/join', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Already a member of this startup' });
     }
 
-    // Benutzer als Mitglied hinzufügen
     await pool.query(
       'INSERT INTO startup_members (startup_id, user_id) VALUES ($1, $2)',
       [startupId, userId]
     );
 
-    // Aktualisierte Mitgliederzahl abrufen
     const membersCount = await pool.query(
       'SELECT COUNT(*) FROM startup_members WHERE startup_id = $1',
       [startupId]
@@ -207,8 +208,6 @@ app.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
-
-// Benutzers Startups abrufen
 app.get('/users/:id/startups', authenticateToken, async (req, res) => {
   const userId = req.params.id;
 
@@ -229,7 +228,6 @@ app.get('/users/:id/startups', authenticateToken, async (req, res) => {
   }
 });
 
-// Startups abrufen (öffentlich zugänglich)
 app.get('/startups', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -247,21 +245,17 @@ app.get('/startups', async (req, res) => {
   }
 });
 
-// Startup löschen (nur Gründer oder Admin)
 app.delete('/startups/:id', authenticateToken, async (req, res) => {
   try {
-    // 1. Verify startup exists
     const startup = await pool.query('SELECT founder_id FROM startups WHERE id = $1', [req.params.id]);
     if (startup.rows.length === 0) {
       return res.status(404).json({ message: 'Startup not found' });
     }
 
-    // 2. Verify ownership (with explicit type conversion)
     if (Number(startup.rows[0].founder_id) !== Number(req.user.userId)) {
       return res.status(403).json({ message: 'Only the founder can delete this startup' });
     }
 
-    // 3. Perform deletion
     await pool.query('DELETE FROM startup_members WHERE startup_id = $1', [req.params.id]);
     await pool.query('DELETE FROM startups WHERE id = $1', [req.params.id]);
     
@@ -269,6 +263,88 @@ app.delete('/startups/:id', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Delete error:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+app.get('/api/user/settings', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT dark_mode FROM user_settings WHERE user_id = $1',
+      [req.user.userId]
+    );
+    
+    res.json({ 
+      dark_mode: result.rows[0]?.dark_mode ?? false,
+      user_id: req.user.userId
+    });
+  } catch (err) {
+    console.error('Settings fetch error:', err);
+    res.status(500).json({ 
+      message: 'Failed to load settings',
+      error: err.message 
+    });
+  }
+});
+
+app.post('/api/user/settings', authenticateToken, async (req, res) => {
+  const { dark_mode } = req.body;
+  
+  if (typeof dark_mode !== 'boolean') {
+    return res.status(400).json({ message: 'Invalid dark_mode value' });
+  }
+
+  try {
+    await pool.query(`
+      INSERT INTO user_settings (user_id, dark_mode, updated_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (user_id) 
+      DO UPDATE SET 
+        dark_mode = EXCLUDED.dark_mode,
+        updated_at = NOW()
+    `, [req.user.userId, dark_mode]);
+    
+    res.json({ 
+      success: true,
+      message: 'Settings updated',
+      dark_mode
+    });
+  } catch (err) {
+    console.error('Settings save error:', err);
+    res.status(500).json({ 
+      message: 'Failed to save settings',
+      error: err.message 
+    });
+  }
+});
+
+app.post('/api/user/change-password', authenticateToken, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'Both passwords are required' });
+  }
+
+  try {
+    const user = await pool.query(
+      'SELECT password_hash FROM users WHERE id = $1', 
+      [req.user.userId]
+    );
+    
+    const isValid = await bcrypt.compare(currentPassword, user.rows[0].password_hash);
+    if (!isValid) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await pool.query(
+      'UPDATE users SET password_hash = $1 WHERE id = $2',
+      [hashedPassword, req.user.userId]
+    );
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Password change error:', err);
+    res.status(500).json({ message: 'Error changing password' });
   }
 });
 
