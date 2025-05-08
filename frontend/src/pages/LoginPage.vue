@@ -84,10 +84,10 @@
 </template>
 
 <script>
-import axios from 'axios';
 import { useQuasar } from 'quasar';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { api } from 'src/boot/axios';
 
 export default {
   name: 'LoginPage',
@@ -101,47 +101,40 @@ export default {
     const isMobile = $q.screen.lt.md;
 
     const login = async () => {
-  loading.value = true;
-  try {
-    const response = await axios.post('http://localhost:5000/login', {
-      username: username.value,
-      password: password.value,
-    });
-    
-    if (!response.data.token) {
-      throw new Error('No token received');
-    }
-    
-    const token = response.data.token;
-    localStorage.setItem('auth_token', token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
+      loading.value = true;
+      try {
+        await api.post('/login', {
+          username: username.value,
+          password: password.value,
+        }, {
+          withCredentials: true // Wichtig für Cookies
+        });
+        
+        // Kein localStorage mehr nötig, da Cookie automatisch gespeichert wird
+        $q.notify({
+          type: 'positive',
+          message: 'Login successful!',
+          position: 'top',
+        });
 
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    
-    $q.notify({
-      type: 'positive',
-      message: 'Login successful!',
-      position: 'top',
-    });
-
-    router.push({name: 'dashboard'});
-  } catch (error) {
-    let errorMessage = 'Login failed. Please try again.';
-    if (error.response) {
-      errorMessage = error.response.data?.message || errorMessage;
-    } else if (error.request) {
-      errorMessage = 'No response from server';
-    }
-    
-    $q.notify({
-      type: 'negative',
-      message: errorMessage,
-      position: 'top',
-    });
-  } finally {
-    loading.value = false;
-  }
-};
+        router.push({name: 'dashboard'});
+      } catch (error) {
+        let errorMessage = 'Login failed. Please try again.';
+        if (error.response) {
+          errorMessage = error.response.data?.message || errorMessage;
+        } else if (error.request) {
+          errorMessage = 'No response from server';
+        }
+        
+        $q.notify({
+          type: 'negative',
+          message: errorMessage,
+          position: 'top',
+        });
+      } finally {
+        loading.value = false;
+      }
+    };
 
     const bubbleStyle = () => {
       const size = Math.random() * 20 + 10;

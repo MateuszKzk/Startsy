@@ -1,50 +1,49 @@
 import { route } from 'quasar/wrappers'
 import { createRouter, createWebHistory } from 'vue-router'
-
-import HomePage from 'src/pages/HomePage.vue'
-import LoginPage from 'src/pages/LoginPage.vue'
-import RegisterPage from 'src/pages/RegisterPage.vue'
-import Dashboard from 'src/pages/DashboardPage.vue'
-import AboutUsPage from 'src/pages/AboutUsPage.vue'
-import StartUpsPage from 'src/pages/StartUpsPage.vue'
+import { api } from 'src/boot/axios'
 
 const routes = [
   {
     path: '/',
     name: 'home',
-    component: HomePage
+    component: () => import('pages/HomePage.vue')
   },
   {
     path: '/dashboard',
     name: 'dashboard',
-    component: Dashboard,
+    component: () => import('pages/DashboardPage.vue'),
     meta: { requiresAuth: true }
   },
   {
     path: '/startups',
     name: 'startups',
-    component: StartUpsPage,
+    component: () => import('pages/StartUpsPage.vue'),
     meta: { requiresAuth: true, title: 'Meine Startups' }
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('pages/ProfilePage.vue'),
+    meta: { requiresAuth: true, title: 'My Profile' }
   },
   {
     path: '/about',
     name: 'about-us',
-    component: AboutUsPage,
+    component: () => import('pages/AboutUsPage.vue'),
     meta: { title: 'Über Uns' }
   },
   {
     path: '/login',
     name: 'login',
-    component: LoginPage,
+    component: () => import('pages/LoginPage.vue'),
     meta: { guestOnly: true }
   },
   {
     path: '/register',
     name: 'register',
-    component: RegisterPage,
+    component: () => import('pages/RegisterPage.vue'),
     meta: { guestOnly: true }
   },
-    
   {
     path: '/settings',
     component: () => import('layouts/MainLayout.vue'),
@@ -57,11 +56,6 @@ const routes = [
       }
     ]
   }
-  
-  
-  
-  
-  
 ]
 
 export default route(function () {
@@ -73,23 +67,27 @@ export default route(function () {
     }
   })
 
-  router.beforeEach((to, from, next) => {
-    const isAuthenticated = !!localStorage.getItem('auth_token')
-    const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-    const guestOnly = to.matched.some(record => record.meta.guestOnly)
-
-    document.title = to.meta.title ? `${to.meta.title} | Startsy` : 'Startsy'
-
-    if (requiresAuth && !isAuthenticated) {
-      return next({ name: 'login', query: { redirect: to.fullPath } })
+  router.beforeEach(async (to, from, next) => {
+    const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+    const guestOnly = to.matched.some(record => record.meta.guestOnly);
+  
+    try {
+      const response = await api.get('/api/me');
+      if (response.data?.user) {
+        if (guestOnly) return next({ name: 'dashboard' });
+        return next();
+      }
+    } catch (error) {
+      if (requiresAuth) {
+        return next({
+          name: 'login',
+          query: { redirect: to.fullPath !== '/' ? to.fullPath : undefined }
+        });
+      }
+      console.error(error);
     }
-
-    if (guestOnly && isAuthenticated) {
-      return next({ name: 'dashboard' })  // Weiterleitung für authentifizierte Benutzer zu 'home'
-    }
-
-    next()
-  })
+    next();
+  });
 
   return router
 })

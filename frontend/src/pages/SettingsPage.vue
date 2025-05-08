@@ -54,7 +54,6 @@ import { api } from 'src/boot/axios'
 const $q = useQuasar()
 const router = useRouter()
 
-// State
 const isDark = ref(false)
 const darkModeLoading = ref(false)
 
@@ -63,52 +62,44 @@ onMounted(async () => {
   try {
     darkModeLoading.value = true
     const response = await api.get('/api/user/settings')
-    
-    // Fallback to system preference if no settings exist
+
     if (response.data.dark_mode === undefined) {
       isDark.value = $q.dark.isActive
-      await api.post('/api/user/settings', {
-        dark_mode: isDark.value
-      })
+      await api.post('/api/user/settings', { dark_mode: isDark.value })
     } else {
       isDark.value = response.data.dark_mode
       $q.dark.set(isDark.value)
     }
   } catch (err) {
     console.error('Fehler beim Laden der Einstellungen:', err)
-    // Fallback to system preference
     isDark.value = $q.dark.isActive
   } finally {
     darkModeLoading.value = false
   }
 })
 
-// Dark Mode umschalten und in DB speichern
+// Dark Mode umschalten und speichern
 const toggleDarkMode = async () => {
   try {
     darkModeLoading.value = true
     $q.dark.toggle()
     isDark.value = $q.dark.isActive
-    
-    // Korrekter Property-Name (dark_mode statt darkMode)
-    await api.post('/api/user/settings', {
-      dark_mode: isDark.value
-    })
-    
+
+    await api.post('/api/user/settings', { dark_mode: isDark.value })
+
     $q.notify({
       message: 'Einstellungen gespeichert',
       color: 'positive',
       timeout: 1000
     })
   } catch (err) {
+    console.error('Fehler beim Speichern der Einstellungen:', err)
     $q.notify({
       message: 'Einstellungen konnten nicht gespeichert werden',
       color: 'negative'
     })
-    console.error('Fehler beim Speichern der Einstellungen:', err)
-    
-    // Bei Fehler zurückschalten
-    $q.dark.toggle()
+
+    $q.dark.toggle() // zurückschalten
     isDark.value = $q.dark.isActive
   } finally {
     darkModeLoading.value = false
@@ -118,59 +109,68 @@ const toggleDarkMode = async () => {
 // Passwort ändern Dialog
 const changePassword = () => {
   $q.dialog({
-  title: 'Passwort ändern',
-  message: 'Bitte geben Sie Ihr aktuelles und neues Passwort ein',
-  prompts: [
-    {
-      model: '',
-      type: 'password',
-      label: 'Aktuelles Passwort',
-      isValid: val => val.length > 0,
-      hint: 'Ihr aktuelles Passwort'
-    },
-    {
-      model: '',
-      type: 'password',
-      label: 'Neues Passwort',
-      isValid: val => val.length > 6,
-      hint: 'Mindestens 6 Zeichen'
+    title: 'Passwort ändern',
+    message: 'Bitte geben Sie Ihr aktuelles und neues Passwort ein',
+    prompts: [
+      {
+        model: '',
+        type: 'password',
+        label: 'Aktuelles Passwort',
+        isValid: val => val.length > 0,
+        hint: 'Ihr aktuelles Passwort'
+      },
+      {
+        model: '',
+        type: 'password',
+        label: 'Neues Passwort',
+        isValid: val => val.length > 6,
+        hint: 'Mindestens 6 Zeichen'
+      }
+    ],
+    cancel: true,
+    persistent: true
+  }).onOk(async ([currentPassword, newPassword]) => {
+    try {
+      await api.post('/api/user/change-password', {
+        currentPassword,
+        newPassword
+      })
+      $q.notify({
+        message: 'Passwort erfolgreich geändert',
+        color: 'positive'
+      })
+    } catch (err) {
+      console.error(err)
+      $q.notify({
+        message: err.response?.data?.message || 'Passwort konnte nicht geändert werden',
+        color: 'negative'
+      })
     }
-  ],
-  cancel: true,
-  persistent: true
-}).onOk(async ([currentPassword, newPassword]) => {
-  try {
-    await api.post('/api/user/change-password', { 
-      currentPassword,
-      newPassword 
-    })
-    $q.notify({
-      message: 'Passwort erfolgreich geändert',
-      color: 'positive'
-    })
-  } catch (err) {
-    $q.notify({
-      message: err.response?.data?.message || 'Passwort konnte nicht geändert werden',
-      color: 'negative'
-    })
-  }
-})
+  })
 }
 
-// Logout
+// Logout mit HTTP-Only Cookie
 const logout = () => {
   $q.dialog({
     title: 'Abmelden',
     message: 'Möchten Sie sich wirklich abmelden?',
     cancel: true,
     persistent: true
-  }).onOk(() => {
-    localStorage.removeItem('auth_token')
-    router.push('/login')
-    $q.notify({
-      message: 'Erfolgreich abgemeldet',
-      color: 'positive'
-    })
+  }).onOk(async () => {
+    try {
+      await api.post('/api/logout')  // Cookie wird serverseitig entfernt
+      router.push('/login')
+      $q.notify({
+        message: 'Erfolgreich abgemeldet',
+        color: 'positive'
+      })
+    } catch (err) {
+      console.error('Fehler beim Logout:', err)
+      $q.notify({
+        message: 'Abmelden fehlgeschlagen',
+        color: 'negative'
+      })
+    }
   })
 }
 </script>

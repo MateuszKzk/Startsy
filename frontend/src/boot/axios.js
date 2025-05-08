@@ -1,23 +1,20 @@
-import { boot } from 'quasar/wrappers'
-import axios from 'axios'
+import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000'
-})
+  baseURL: 'http://localhost:5000',
+  withCredentials: true // Wichtig für Cookies
+});
 
-export default boot(({ app }) => {
-    // Request Interceptor für JWT Token
-    api.interceptors.request.use(config => {
-      const token = localStorage.getItem('auth_token')
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
-      return config
-    })
-    
-    // This should be using api, not axios
-    app.config.globalProperties.$axios = axios // <-- Change to api
-    app.config.globalProperties.$api = api
-  })
+// Response Interceptor für globale Fehlerbehandlung
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 403) {
+      // Token ist ungültig - zum Login weiterleiten
+      window.location.href = '/login?session=expired';
+    }
+    return Promise.reject(error);
+  }
+);
 
-export { api }
+export { api };
