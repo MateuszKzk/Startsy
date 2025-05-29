@@ -19,27 +19,26 @@
                 {{ user.role }}
               </q-badge>
             </q-avatar>
-            <div>
+            <div class="col">
               <div class="text-h5 text-weight-bold">{{ user.full_name || user.username }}</div>
-              <div class="text-subtitle2 q-mt-xs" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-7'">
+              <div class="text-caption q-mt-xs" :class="$q.dark.isActive ? 'text-grey-4' : 'text-grey-7'">
+                @{{ user.username }}
               </div>
             </div>
           </div>
 
           <!-- Stats -->
-          <div class="row justify-around q-mt-lg">
+          <div class="row justify-around q-mt-lg q-mb-sm">
             <div class="text-center">
-              <div class="row items-center justify-center q-gutter-xs">
-                <q-icon name="rocket" size="20px" color="primary" />
-                <div class="text-h5 text-weight-bold">{{ userStats.startups }}</div>
-              </div>
+              <div class="text-h5 text-weight-bold">{{ userStats.startups }}</div>
               <div class="text-caption">Startups</div>
             </div>
             <div class="text-center">
-              <div class="row items-center justify-center q-gutter-xs">
-                <q-icon name="people" size="20px" color="primary" />
-                <div class="text-h5 text-weight-bold">{{ userStats.members }}</div>
-              </div>
+              <div class="text-h5 text-weight-bold">{{ userStats.memberships }}</div>
+              <div class="text-caption">Mitgliedschaften</div>
+            </div>
+            <div class="text-center">
+              <div class="text-h5 text-weight-bold">{{ userStats.members }}</div>
               <div class="text-caption">Mitglieder</div>
             </div>
           </div>
@@ -50,12 +49,13 @@
           v-model="tab" 
           dense 
           align="justify" 
-          class="q-mt-md"
+          class="q-mt-md shadow-1"
           :class="$q.dark.isActive ? 'bg-dark' : 'bg-white'"
           active-color="primary"
           indicator-color="primary"
         >
           <q-tab name="startups" icon="rocket" label="Meine Startups" />
+          <q-tab name="memberships" icon="groups" label="Mitgliedschaften" />
         </q-tabs>
 
         <q-tab-panels v-model="tab" animated class="transparent q-mt-sm">
@@ -78,23 +78,28 @@
               />
             </div>
             
-            <!-- Horizontale Scroll-Liste für Startups -->
-            <div v-else class="horizontal-scroll-container">
-              <div class="horizontal-scroll-content">
+            <div v-else class="row q-col-gutter-md">
+              <div 
+                v-for="startup in startups" 
+                :key="startup.id" 
+                class="col-12 col-sm-6"
+              >
                 <q-card 
-                  v-for="startup in startups" 
-                  :key="startup.id" 
                   class="startup-card"
                   :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'"
-                  @click="openStartup(startup.id)"
                 >
                   <q-img
                     :src="startup.logo || 'https://cdn.quasar.dev/img/placeholder.png'"
                     basic
-                    style="height: 120px"
+                    style="height: 140px"
                   >
                     <div class="absolute-bottom text-subtitle1 text-weight-bold">
                       {{ startup.name }}
+                    </div>
+                    <div class="absolute-top-right q-ma-xs">
+                      <q-chip dense color="primary" text-color="white" icon="star" v-if="startup.is_featured">
+                        Featured
+                      </q-chip>
                     </div>
                   </q-img>
                   
@@ -109,6 +114,84 @@
                       {{ startup.description || 'Keine Beschreibung vorhanden' }}
                     </div>
                   </q-card-section>
+                  
+                  <q-card-actions align="right">
+                    <q-btn 
+                      flat 
+                      color="primary" 
+                      label="Details" 
+                      @click="openStartup(startup.id)"
+                    />
+                  </q-card-actions>
+                </q-card>
+              </div>
+            </div>
+          </q-tab-panel>
+          
+          <!-- Mitgliedschaften Tab -->
+          <q-tab-panel name="memberships">
+            <div v-if="loading" class="text-center q-pa-lg">
+              <q-spinner color="primary" size="3em" />
+              <div class="text-grey-6 q-mt-sm">Lade Daten...</div>
+            </div>
+            
+            <div v-else-if="memberships.length === 0" class="text-center q-pa-lg">
+              <q-icon name="group_add" size="xl" color="grey-4" />
+              <div class="text-grey-6 q-mt-sm">Keine Mitgliedschaften vorhanden</div>
+              <q-btn 
+                color="primary" 
+                label="Startups entdecken" 
+                unelevated 
+                class="q-mt-md"
+                @click="$router.push('/startups')"
+              />
+            </div>
+            
+            <div v-else class="row q-col-gutter-md">
+              <div 
+                v-for="membership in memberships" 
+                :key="membership.id" 
+                class="col-12 col-sm-6"
+              >
+                <q-card 
+                  class="startup-card"
+                  :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-white'"
+                >
+                  <q-img
+                    :src="membership.logo || 'https://cdn.quasar.dev/img/placeholder.png'"
+                    basic
+                    style="height: 140px"
+                  >
+                    <div class="absolute-bottom text-subtitle1 text-weight-bold">
+                      {{ membership.name }}
+                    </div>
+                    <div class="absolute-top-right q-ma-xs">
+                      <q-chip dense color="accent" text-color="white" icon="person">
+                        Mitglied
+                      </q-chip>
+                    </div>
+                  </q-img>
+                  
+                  <q-card-section>
+                    <div class="text-caption text-grey-6 q-mt-xs">
+                      <q-icon name="people" size="16px" />
+                      {{ membership.members_count }} Mitglieder • 
+                      <q-icon name="calendar_today" size="16px" class="q-ml-xs" />
+                      {{ formatDate(membership.joined_at) }}
+                    </div>
+                    <div class="text-caption ellipsis-2-lines q-mt-sm">
+                      {{ membership.description || 'Keine Beschreibung vorhanden' }}
+                    </div>
+                  </q-card-section>
+                  
+                  <q-card-actions align="right">
+                    <q-btn 
+                      flat 
+                      color="primary" 
+                      label="Details" 
+                      @click="openStartup(membership.id)"
+                    />
+                  </q-card-actions>
                 </q-card>
               </div>
             </div>
@@ -133,34 +216,35 @@ export default defineComponent({
     const tab = ref('startups')
     const user = ref({})
     const startups = ref([])
+    const memberships = ref([])
     const loading = ref(true)
-
-    // Dark Mode aus Backend laden
-    const loadDarkMode = async () => {
-      try {
-        const response = await api.get('/api/user/settings')
-        $q.dark.set(response.data.dark_mode)
-      } catch (error) {
-        console.error('Fehler beim Laden des Dark Modes:', error)
-      }
-    }
-
-    const userStats = computed(() => {
-      return {
-        startups: startups.value.length,
-        members: startups.value.reduce((sum, s) => sum + (parseInt(s.members_count) || 0), 0)
-      }
-    })
 
     const loadUserData = async () => {
       try {
         loading.value = true
-        await loadDarkMode()
         
-        // Benutzerdaten und Startups in einem Request laden
-        const response = await api.get('/api/user/profile')
-        user.value = response.data.user || {}
-        startups.value = response.data.startups || []
+        // Benutzerdaten und Startups laden
+        const [profileRes, membershipsRes] = await Promise.all([
+          api.get('/api/user/profile'),
+          api.get('/startups') // Alle Startups laden und dann filtern
+        ])
+        
+        user.value = profileRes.data.user || {}
+        startups.value = profileRes.data.startups || []
+        
+        // Mitgliedschaften aus allen Startups filtern
+        const allStartups = membershipsRes.data || []
+        const membershipsResponse = await api.get('/api/me')
+        const userId = membershipsResponse.data.user.id
+        
+        // Temporär: Wir nehmen an, dass der User Mitglied in allen Startups ist, wo er nicht Gründer ist
+        memberships.value = allStartups.filter(startup => {
+          return startup.founder_id !== userId && 
+                 startups.value.findIndex(s => s.id === startup.id) === -1
+        }).map(startup => ({
+          ...startup,
+          joined_at: startup.created_at // Da wir kein richtiges Beitrittsdatum haben
+        }))
         
       } catch (error) {
         console.error('Fehler beim Laden:', error)
@@ -173,6 +257,14 @@ export default defineComponent({
         loading.value = false
       }
     }
+
+    const userStats = computed(() => {
+      return {
+        startups: startups.value.length,
+        memberships: memberships.value.length,
+        members: startups.value.reduce((sum, s) => sum + (parseInt(s.members_count) || 0), 0)
+      }
+    })
 
     const formatDate = (dateString) => {
       if (!dateString) return 'Unbekannt'
@@ -199,6 +291,7 @@ export default defineComponent({
       tab,
       user,
       startups,
+      memberships,
       userStats,
       loading,
       formatDate,
@@ -219,7 +312,7 @@ export default defineComponent({
 }
 
 .profile-page {
-  max-width: 600px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
@@ -233,28 +326,12 @@ export default defineComponent({
   background: white;
 }
 
-/* Horizontale Scroll-Liste */
-.horizontal-scroll-container {
-  overflow-x: auto;
-  overflow-y: hidden;
-  white-space: nowrap;
-  padding: 8px 0;
-  -webkit-overflow-scrolling: touch;
-}
-
-.horizontal-scroll-content {
-  display: inline-flex;
-  gap: 16px;
-}
-
 .startup-card {
-  width: 280px;
-  display: inline-flex;
-  flex-direction: column;
   border-radius: 12px;
   transition: all 0.3s ease;
-  vertical-align: top;
-  white-space: normal;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .startup-card:hover {
@@ -268,5 +345,10 @@ export default defineComponent({
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.q-card__actions {
+  margin-top: auto;
 }
 </style>

@@ -8,6 +8,7 @@ const cookieParser = require('cookie-parser');
 require('dotenv').config();
 
 
+
 const app = express();
 const port = 5000;
 
@@ -69,6 +70,51 @@ const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+// Add to your server.js
+const WebSocket = require('ws');
+
+const wss = new WebSocket.Server({ port: 8080 });
+
+const activeConnections = new Map();
+
+wss.on('connection', (ws, req) => {
+  // Extract token from query params or headers
+  const token = req.url.split('token=')[1];
+  
+  if (!token) {
+    ws.close();
+    return;
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      ws.close();
+      return;
+    }
+
+    // Store connection with user ID
+    activeConnections.set(user.userId, ws);
+
+    ws.on('message', (message) => {
+      // Handle incoming messages
+      const { conversationId, content, recipientId } = JSON.parse(message);
+      
+      // Broadcast to recipient if online
+      if (activeConnections.has(recipientId)) {
+        activeConnections.get(recipientId).send(JSON.stringify({
+          type: 'new_message',
+          conversationId,
+          content
+        }));
+      }
+    });
+
+    ws.on('close', () => {
+      activeConnections.delete(user.userId);
+    });
+  });
+});
 
 app.options('*', cors());
 
@@ -168,23 +214,32 @@ app.post('/login', async (req, res) => {
 });
 
 app.post('/startups', authenticateToken, async (req, res) => {
-  const { name, description, required_skills, contact_info, color } = req.body;
+  console.log('Received startup data:', req.body); // Add this line
+  const { name, description, required_skills, contacts, color } = req.body;
   const founderId = req.user.userId;
 
   try {
+    console.log('Values being inserted:', [name, description, required_skills, contacts, founderId, color || '#ffffff']); // Add this line
+    
     const result = await pool.query(`
-      INSERT INTO startups (name, description, required_skills, contact_info, founder_id, color)
+      INSERT INTO startups (name, description, required_skills, contacts, founder_id, color)
       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [name, description, required_skills, contact_info, founderId, color || '#ffffff']
+      [name, description, required_skills, contacts, founderId, color || '#ffffff']
     );
 
-    await pool.query('INSERT INTO startup_members (startup_id, user_id) VALUES ($1, $2)', 
-      [result.rows[0].id, founderId]);
+    await pool.query(
+      'INSERT INTO startup_members (startup_id, user_id) VALUES ($1, $2)',
+      [result.rows[0].id, founderId]
+    );
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Error creating startup:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 });
 
@@ -541,6 +596,281 @@ app.post('/logout', (req, res) => {
     path: '/'
   });
   res.json({ message: 'Logged out successfully' });
+});
+
+// Get or create conversation between two users
+app.post('/api/conversations', authenticateToken, async (req, res) => {
+  const { participantId } = req.body;
+  const userId = req.user.userId;
+
+  // Input validation
+  if (!participantId) {
+    return res.status(400).json({ 
+      message: "Participant ID is required" 
+    });
+  }
+
+  if (userId === participantId) {
+    return res.status(400).json({ 
+      message: "Cannot create conversation with yourself" 
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Verify participant exists
+    const participantExists = await client.query(
+      'SELECT id FROM users WHERE id = $1', 
+      [participantId]
+    );
+    
+    if (participantExists.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ 
+        message: "Participant not found" 
+      });
+    }
+
+    // Check if conversation already exists (improved query)
+    const existingConversation = await client.query(`
+      SELECT c.id 
+      FROM conversations c
+      WHERE EXISTS (
+        SELECT 1 FROM conversation_participants 
+        WHERE conversation_id = c.id AND user_id = $1
+      )
+      AND EXISTS (
+        SELECT 1 FROM conversation_participants 
+        WHERE conversation_id = c.id AND user_id = $2
+      )
+      LIMIT 1
+    `, [userId, participantId]);
+
+    if (existingConversation.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.json({
+        conversationId: existingConversation.rows[0].id,
+        isNew: false
+      });
+    }
+
+    // Create new conversation
+    const conversation = await client.query(
+      'INSERT INTO conversations DEFAULT VALUES RETURNING id'
+    );
+    const conversationId = conversation.rows[0].id;
+
+    // Add participants (order doesn't matter)
+    await client.query(
+      'INSERT INTO conversation_participants (conversation_id, user_id) VALUES ($1, $2), ($1, $3)',
+      [conversationId, userId, participantId]
+    );
+
+    await client.query('COMMIT');
+    
+    res.status(201).json({
+      conversationId,
+      isNew: true
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Conversation creation error:', err);
+    res.status(500).json({ 
+      message: 'Failed to create conversation',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Get messages for a conversation (improved with proper sender identification)
+app.get('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
+  const conversationId = req.params.id;
+  const userId = req.user.userId;
+
+  try {
+    // Verify user is part of conversation
+    const isParticipant = await pool.query(
+      'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
+      [conversationId, userId]
+    );
+
+    if (isParticipant.rows.length === 0) {
+      return res.status(403).json({ message: 'Not part of this conversation' });
+    }
+
+    // Get messages with proper sender identification
+    const messages = await pool.query(`
+      SELECT 
+        m.id,
+        m.content,
+        m.sent_at,
+        m.sender_id,
+        m.read_at,
+        u.username as sender_username,
+        u.full_name as sender_name,
+        (m.sender_id = $2) as is_sender
+      FROM messages m
+      JOIN users u ON m.sender_id = u.id
+      WHERE m.conversation_id = $1
+      ORDER BY m.sent_at ASC
+    `, [conversationId, userId]);
+
+    // Mark messages as read (only if they're not sent by current user)
+    await pool.query(`
+      UPDATE messages 
+      SET read_at = NOW() 
+      WHERE conversation_id = $1 
+      AND sender_id != $2 
+      AND read_at IS NULL
+    `, [conversationId, userId]);
+
+    res.json(messages.rows);
+  } catch (err) {
+    console.error('Get messages error:', err);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+// Send a message (with improved response)
+app.post('/api/conversations/:id/messages', authenticateToken, async (req, res) => {
+  const conversationId = req.params.id;
+  const { content } = req.body;
+  const userId = req.user.userId;
+
+  if (!content || content.trim() === '') {
+    return res.status(400).json({ message: 'Message content is required' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Verify user is part of conversation
+    const isParticipant = await client.query(
+      'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
+      [conversationId, userId]
+    );
+
+    if (isParticipant.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ message: 'Not part of this conversation' });
+    }
+
+    // Insert message
+    const message = await client.query(`
+      INSERT INTO messages (conversation_id, sender_id, content)
+      VALUES ($1, $2, $3)
+      RETURNING id, content, sent_at, sender_id, read_at
+    `, [conversationId, userId, content.trim()]);
+
+    // Update conversation timestamp
+    await client.query(
+      'UPDATE conversations SET updated_at = NOW() WHERE id = $1',
+      [conversationId]
+    );
+
+    await client.query('COMMIT');
+    
+    // Include sender information in response
+    const senderInfo = await pool.query(
+      'SELECT username, full_name FROM users WHERE id = $1',
+      [userId]
+    );
+    
+   res.status(201).json({
+  ...message.rows[0],
+  sender_username: senderInfo.rows[0].username,
+  sender_name: senderInfo.rows[0].full_name,
+  is_sender: true,
+  sender_id: userId // Jawnie ustaw sender_id
+});
+
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Send message error:', err);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Get conversation participant info (improved)
+app.get('/api/conversations/:id/participant', authenticateToken, async (req, res) => {
+  const conversationId = req.params.id;
+  const userId = req.user.userId;
+
+  try {
+    const participant = await pool.query(`
+      SELECT 
+        u.id, 
+        u.username, 
+        u.full_name,
+        EXISTS (
+          SELECT 1 FROM user_connections 
+          WHERE (user_id = $2 AND connection_id = u.id)
+          OR (user_id = u.id AND connection_id = $2)
+        ) as is_connected
+      FROM conversation_participants cp
+      JOIN users u ON cp.user_id = u.id
+      WHERE cp.conversation_id = $1 AND cp.user_id != $2
+    `, [conversationId, userId]);
+
+    if (participant.rows.length === 0) {
+      return res.status(404).json({ message: 'Participant not found' });
+    }
+
+    res.json(participant.rows[0]);
+  } catch (err) {
+    console.error('Get participant error:', err);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+});
+
+// Get all conversations for current user
+app.get('/api/conversations', authenticateToken, async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    const conversations = await pool.query(`
+      SELECT 
+        c.id,
+        c.updated_at,
+        u.id as participant_id,
+        u.username as participant_username,
+        u.full_name as participant_name,
+        (SELECT content FROM messages WHERE conversation_id = c.id ORDER BY sent_at DESC LIMIT 1) as last_message,
+        (SELECT sent_at FROM messages WHERE conversation_id = c.id ORDER BY sent_at DESC LIMIT 1) as last_message_time,
+        (SELECT COUNT(*) FROM messages WHERE conversation_id = c.id AND sender_id != $1 AND read_at IS NULL) as unread_count
+      FROM conversations c
+      JOIN conversation_participants cp ON c.id = cp.conversation_id
+      JOIN users u ON cp.user_id = u.id
+      WHERE c.id IN (
+        SELECT conversation_id FROM conversation_participants WHERE user_id = $1
+      ) AND u.id != $1
+      ORDER BY last_message_time DESC NULLS LAST
+    `, [userId]);
+
+    res.json(conversations.rows);
+  } catch (err) {
+    console.error('Get conversations error:', err);
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
 });
 
 app.listen(port, () => {
