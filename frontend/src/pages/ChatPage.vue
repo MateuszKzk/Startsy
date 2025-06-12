@@ -226,31 +226,39 @@ export default {
       newParticipant.value = ''
     }
 
-    const createConversation = async () => {
-      try {
-        const usersResponse = await api.get(`/api/users/search?username=${newParticipant.value.trim()}`)
-        
-        if (usersResponse.data.length === 0) {
-          throw new Error('User not found')
-        }
-
-        const participantId = usersResponse.data[0].id
-        const response = await api.post('/api/conversations', {
-          participantId: participantId
-        })
-
-        showNewConversationDialog.value = false
-        await loadConversations()
-        selectConversation(response.data.conversationId)
-      } catch (error) {
-        $q.notify({
-          type: 'negative',
-          message: error.response?.data?.message || error.message || 'Failed to create conversation',
-          position: 'top',
-          timeout: 3000
-        })
-      }
+   const createConversation = async () => {
+  try {
+    // First search for the user
+    const usersResponse = await api.get(`/api/user/search?username=${newParticipant.value.trim()}`);
+    
+    if (!usersResponse.data || usersResponse.data.length === 0) {
+      throw new Error('User not found');
     }
+
+    const participant = usersResponse.data[0];
+    const response = await api.post('/api/conversations', {
+      participantId: participant.id
+    });
+
+    showNewConversationDialog.value = false;
+    newParticipant.value = '';
+    
+    await loadConversations();
+    
+    // Select the new conversation
+    if (response.data.conversationId) {
+      await selectConversation(response.data.conversationId);
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || error.message || 'Failed to create conversation',
+      position: 'top',
+      timeout: 3000
+    });
+    console.error('Create conversation error:', error);
+  }
+};
 
     const loadConversations = async () => {
       try {
@@ -266,87 +274,88 @@ export default {
       }
     }
 
-    const selectConversation = async (conversationId) => {
-      activeConversation.value = conversationId
-       console.log('Current user ID:', currentUserId.value);
+const selectConversation = async (conversationId) => {
+  try {
+    activeConversation.value = conversationId;
+    messages.value = [];
 
-      try {
-        const participantResponse = await api.get(`/api/conversations/${conversationId}/participant`)
-        participantName.value = participantResponse.data.full_name || participantResponse.data.username
+    // Get participant info
+    const participantResponse = await api.get(`/api/conversations/${conversationId}/participant`);
+    participantName.value = participantResponse.data.full_name || participantResponse.data.username;
 
-        const messagesResponse = await api.get(`/api/conversations/${conversationId}/messages`)
-        messages.value = messagesResponse.data.map(msg => ({
-          ...msg,
-          sender_id: msg.sender_id // Ensure sender_id is properly set
-        }))
+    // Get messages
+    const messagesResponse = await api.get(`/api/conversations/${conversationId}/messages`);
+    messages.value = messagesResponse.data.map(msg => ({
+      ...msg,
+      isCurrentUser: msg.sender_id === currentUserId.value
+    }));
 
-        nextTick(() => {
-          scrollToBottom()
-        })
-      } catch (error) {
-        $q.notify({
-          type: 'negative',
-          message: 'Failed to load conversation',
-          position: 'top'
-        })
-        console.log(error);
-      }
-      
-    }
+    nextTick(() => {
+      scrollToBottom();
+    });
+  } catch (error) {
+    console.error('Select conversation error:', error);
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to load conversation',
+      position: 'top'
+    });
+  }
+};
 
     const sendMessage = async () => {
-  if (!newMessage.value.trim() || !authStore.user?.id) return;
-  
+  if (!newMessage.value.trim() || !activeConversation.value) return;
+
   const tempId = Date.now();
-  const senderId = authStore.user.id; // Jedno źródło prawdy
+  const senderId = authStore.user?.id;
   
-  messages.value.push({
+  // Create temporary message
+  const tempMessage = {
     id: tempId,
     content: newMessage.value,
     sent_at: new Date().toISOString(),
     sender_id: senderId,
     status: 'sending'
+  };
+
+  messages.value.push(tempMessage);
+  newMessage.value = '';
+
+  nextTick(() => {
+    scrollToBottom();
   });
 
-      const messageContent = newMessage.value
-      newMessage.value = ''
+  try {
+    const response = await api.post(`/api/conversations/${activeConversation.value}/messages`, {
+      content: tempMessage.content
+    });
 
-      nextTick(() => {
-        scrollToBottom()
-      })
-
-      try {
-        const response = await api.post(`/api/conversations/${activeConversation.value}/messages`, {
-          content: messageContent
-        })
-
-        // Update the temporary message with the server response
-        const index = messages.value.findIndex(m => m.id === tempId)
-        if (index !== -1) {
-          messages.value[index] = {
-            ...messages.value[index],
-            id: response.data.id,
-            status: 'sent',
-            sender_id: currentUserId.value // Ensure sender_id remains correct
-          }
-        }
-
-        await loadConversations()
-      } catch (error) {
-        // Mark message as failed
-        const index = messages.value.findIndex(m => m.id === tempId)
-        if (index !== -1) {
-          messages.value[index].status = 'failed'
-        }
-        
-        $q.notify({
-          type: 'negative',
-          message: 'Failed to send message',
-          position: 'top'
-        })
-        console.log(error);
-      }
+    // Replace temporary message with server response
+    const index = messages.value.findIndex(m => m.id === tempId);
+    if (index !== -1) {
+      messages.value[index] = {
+        ...response.data,
+        status: 'sent'
+      };
     }
+
+    // Reload conversations to update last message
+    await loadConversations();
+  } catch (error) {
+    // Mark message as failed
+    const index = messages.value.findIndex(m => m.id === tempId);
+    if (index !== -1) {
+      messages.value[index].status = 'failed';
+    }
+    
+    $q.notify({
+      type: 'negative',
+      message: 'Failed to send message',
+      position: 'top'
+    });
+    console.error(error);
+  }
+};
 
     const scrollToBottom = () => {
       if (messagesContainer.value) {

@@ -1,426 +1,558 @@
 <template>
-  <!-- In Ihrem Quasar-Plugin-Import -->
-<link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css" rel="stylesheet">
-  <q-layout view="hHh lpR fFf">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css" rel="stylesheet">
+  
+  <q-layout view="hHh lpR fFf" class="bg-grey-2">
     <!-- ==================== -->
     <!-- HEADER SECTION -->
     <!-- ==================== -->
-    <q-header elevated class="bg-dark">
-  <q-toolbar>
-    <!-- Logo -->
-    <q-btn flat dense to="/" class="q-mr-sm">
-      <q-toolbar-title class="text-white text-left">
-        <q-icon name="rocket" size="md" class="q-mr-sm" />
-        Startsy
-      </q-toolbar-title>
-    </q-btn>
+    <q-header elevated class="bg-dark text-white">
+      <q-toolbar class="q-py-sm">
+        <!-- Logo -->
+        <q-btn flat dense to="/" class="q-mr-sm no-underline">
+          <q-toolbar-title class="text-white text-left flex items-center">
+            <q-icon name="rocket" size="md" class="q-mr-sm text-primary" />
+            <span class="text-weight-bold">Startsy</span>
+          </q-toolbar-title>
+        </q-btn>
 
-    <q-space />
+        <q-space />
 
-    <!-- Navigation for logged in users -->
-    <template v-if="currentUser">
-      <q-tabs v-model="currentTab" shrink stretch inline-label>
-        <q-route-tab exact name="home" label="Home" to="/" icon="home" />
-        <q-route-tab name="startups" label="Startups" to="/startups" icon="business" />
-        <q-route-tab name="about" label="About" to="/about" icon="info" />
-      </q-tabs>
+        <!-- Navigation for logged in users -->
+        <template v-if="currentUser">
+          <q-tabs 
+            v-model="currentTab" 
+            shrink 
+            stretch 
+            inline-label
+            class="text-white"
+            active-color="primary"
+            indicator-color="primary"
+          >
+            <q-route-tab name="startups" label="Startups" to="/startups" icon="business" />
+            <q-route-tab name="chat" label="Chat" to="/chat" icon="chat" />
+          </q-tabs>
 
-      <q-space />
+          <q-space />
 
-      <!-- Such- und Filterfunktionen -->
-      <div class="row items-center q-gutter-sm q-pr-md">
-        <!-- Suchfeld -->
-        <q-input
-  v-model="searchQuery"
-  outlined
-  dense
-  placeholder="Search startups..."
-  class="search-field"
-  clearable
-  dark
-  borderless
-  input-class="text-white"
-  @keyup.enter="performSearch"
-  @clear="performSearch"
->
-  <template v-slot:prepend>
-    <q-icon name="search" color="white" @click="performSearch" />
-  </template>
-</q-input>
+          <!-- Search and Filter -->
+          <div class="row items-center q-gutter-sm q-pr-md">
+            <!-- Search Field -->
+            <q-input
+              v-model="searchQuery"
+              outlined
+              dense
+              placeholder="Search startups..."
+              class="search-field bg-grey-9"
+              clearable
+              dark
+              borderless
+              input-class="text-white"
+              @keyup.enter="performSearch"
+              @clear="performSearch"
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" color="primary" @click="performSearch" />
+              </template>
+            </q-input>
 
-<!-- Kategorie-Filter anpassen -->
-<q-select
-  v-model="selectedCategory"
-  :options="categories"
-  outlined
-  dense
-  label="Filter by category"
-  class="category-filter"
-  dark
-  borderless
-  clearable
-  emit-value
-  map-options
-  style="min-width: 180px"
-  @update:model-value="performSearch"
->
-  <template v-slot:prepend>
-    <q-icon name="filter_list" color="white" />
-  </template>
-  <template v-slot:append>
-    <q-icon 
-      v-if="selectedCategory" 
-      name="close" 
-      class="cursor-pointer" 
-      @click.stop="selectedCategory = null" 
-    />
-  </template>
-</q-select>
-      </div>
+            <!-- Category Filter -->
+            <q-select
+              v-model="selectedCategory"
+              :options="categories"
+              outlined
+              dense
+              label="Filter by category"
+              class="category-filter bg-grey-9"
+              dark
+              borderless
+              clearable
+              emit-value
+              map-options
+              style="min-width: 180px"
+              @update:model-value="performSearch"
+            >
+              <template v-slot:prepend>
+                <q-icon name="filter_list" color="primary" />
+              </template>
+              <template v-slot:append>
+                <q-icon 
+                  v-if="selectedCategory" 
+                  name="close" 
+                  color="primary"
+                  class="cursor-pointer" 
+                  @click.stop="selectedCategory = null" 
+                />
+              </template>
+            </q-select>
+          </div>
 
-      <q-space />
+          <q-space />
 
-      <!-- User Dropdown -->
-      <q-btn-dropdown flat stretch :label="userInitials" class="text-white">
-        <q-list>
-          <q-item clickable v-close-popup to="/profile">
-            <q-item-section avatar>
-              <q-icon name="account_circle" />
-            </q-item-section>
-            <q-item-section>My Profile</q-item-section>
-          </q-item>
+          <!-- User Dropdown -->
+          <q-btn-dropdown 
+            flat 
+            stretch 
+            :label="userInitials" 
+            class="text-white"
+            dropdown-icon="expand_more"
+          >
+            <q-list class="q-py-sm" style="min-width: 200px">
+              <q-item clickable v-close-popup to="/profile" class="q-pa-sm">
+                <q-item-section avatar>
+                  <q-icon name="account_circle" color="primary" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>My Profile</q-item-label>
+                </q-item-section>
+              </q-item>
 
-          <q-item clickable v-close-popup to="/settings">
-            <q-item-section avatar>
-              <q-icon name="settings" />
-            </q-item-section>
-            <q-item-section>Settings</q-item-section>
-          </q-item>
+              <q-item clickable v-close-popup to="/settings" class="q-pa-sm">
+                <q-item-section avatar>
+                  <q-icon name="settings" color="primary" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label>Settings</q-item-label>
+                </q-item-section>
+              </q-item>
 
-          <q-separator />
+              <q-separator class="q-my-xs" />
 
-          <q-item clickable v-close-popup @click="logout">
-            <q-item-section avatar>
-              <q-icon name="logout" color="negative" />
-            </q-item-section>
-            <q-item-section class="text-negative">Logout</q-item-section>
-          </q-item>
-        </q-list>
-      </q-btn-dropdown>
-    </template>
+              <q-item clickable v-close-popup @click="logout" class="q-pa-sm">
+                <q-item-section avatar>
+                  <q-icon name="logout" color="negative" />
+                </q-item-section>
+                <q-item-section>
+                  <q-item-label class="text-negative">Logout</q-item-label>
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
+        </template>
 
-    <!-- Login Button for guests -->
-    <q-btn v-else outline color="white" label="Login" :to="{ name: 'login' }" />
-  </q-toolbar>
-</q-header>
+        <!-- Login Button for guests -->
+        <q-btn 
+          v-else 
+          outline 
+          color="primary" 
+          label="Login" 
+          :to="{ name: 'login' }" 
+          class="q-px-md"
+        />
+      </q-toolbar>
+    </q-header>
 
     <!-- ==================== -->
     <!-- MAIN CONTENT SECTION -->
     <!-- ==================== -->
     <q-page-container>
-      <q-page class="q-pa-md">
-
+      <q-page class="q-pa-lg">
         <!-- Startup Cards Grid -->
-        <div class="q-gutter-md q-mt-md row justify-center">
+        <div class="row q-col-gutter-lg">
           <!-- Add Startup Card -->
-          <!-- Add Startup Card -->
-<q-card class="my-card cursor-pointer" @click="showAddDialog = true">
-  <q-card-section class="flex flex-center column" style="height: 100%;">
-    <q-icon name="add" size="xl" color="grey-6" />
-    <div class="text-h6 q-mt-md text-grey-7">Add New Startup</div>
-  </q-card-section>
-</q-card>
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <q-card 
+              class="my-card cursor-pointer bg-grey-1"
+              flat
+              bordered
+              @click="showAddDialog = true"
+            >
+              <q-card-section class="flex flex-center column" style="height: 200px;">
+                <q-icon name="add" size="xl" color="grey-7" />
+                <div class="text-h6 q-mt-md text-grey-7">Add New Startup</div>
+              </q-card-section>
+            </q-card>
+          </div>
 
           <!-- Startup Cards -->
-          <q-card 
-  v-for="startup in filteredStartups" 
-  :key="startup.id" 
-  class="my-card text-dark"
-  :style="`background-color: ${startup.color || '#ffffff'}`"
-  @click="openStartupDetails(startup)"
->
-  <q-card-section>
-    <div class="text-h6 text-weight-bold">{{ startup.name }}</div>
-    <div class="text-subtitle2 q-mt-sm ellipsis-3-lines">
-      {{ startup.description }}
-    </div>
-  </q-card-section>
+          <div 
+            v-for="startup in filteredStartups" 
+            :key="startup.id" 
+            class="col-12 col-sm-6 col-md-4 col-lg-3"
+          >
+            <q-card 
+              class="my-card text-dark cursor-pointer"
+              :class="{'bg-dark text-white': $q.dark.isActive}"
+              :style="`background-color: ${startup.color || ($q.dark.isActive ? '#1e1e1e' : '#ffffff')}`"
+              flat
+              bordered
+              @click="openStartupDetails(startup)"
+            >
+              <q-card-section>
+                <div class="text-h6 text-weight-bold">{{ startup.name }}</div>
+                <div class="text-subtitle2 q-mt-sm ellipsis-3-lines">
+                  {{ startup.description }}
+                </div>
+              </q-card-section>
 
-  <q-separator />
+              <q-separator />
 
-  <q-card-section class="q-pt-none">
-    <div class="row items-center q-gutter-sm">
-      <q-icon name="schedule" size="sm" />
-      <span class="text-caption">{{ formatDate(startup.created_at) }}</span>
-    </div>
-    <div class="row items-center q-gutter-sm q-mt-sm">
-      <q-icon name="people" size="sm" />
-      <span class="text-caption">{{ startup.members_count || 0 }} members</span>
-    </div>
-  </q-card-section>
+              <q-card-section class="q-pt-none">
+                <div class="row items-center q-gutter-sm">
+                  <q-icon name="schedule" size="sm" :color="$q.dark.isActive ? 'grey-4' : 'grey-7'" />
+                  <span class="text-caption" :class="{'text-grey-4': $q.dark.isActive, 'text-grey-7': !$q.dark.isActive}">
+                    {{ formatDate(startup.created_at) }}
+                  </span>
+                </div>
+                <div class="row items-center q-gutter-sm q-mt-sm">
+                  <q-icon name="people" size="sm" :color="$q.dark.isActive ? 'grey-4' : 'grey-7'" />
+                  <span class="text-caption" :class="{'text-grey-4': $q.dark.isActive, 'text-grey-7': !$q.dark.isActive}">
+                    {{ startup.members_count || 0 }} members
+                  </span>
+                </div>
+              </q-card-section>
 
-  <q-card-actions align="right">
-    <q-btn 
-      flat 
-      color="primary" 
-      label="Details" 
-      @click.stop="openStartupDetails(startup)"
-    />
-  </q-card-actions>
-</q-card>
+              <q-card-actions align="right">
+                <q-btn 
+                  flat 
+                  color="primary" 
+                  label="Details" 
+                  @click.stop="openStartupDetails(startup)"
+                />
+              </q-card-actions>
+            </q-card>
+          </div>
         </div>
 
-        <!-- ==================== -->
-        <!-- ADD STARTUP DIALOG -->
-        <!-- ==================== -->
-        <q-dialog v-model="showAddDialog">
-          <q-card style="min-width: 400px;">
-            <q-card-section>
-              <div class="text-h6">Add New Startup</div>
-            </q-card-section>
-
-            <q-card-section class="q-gutter-md">
-              <q-input v-model="form.name" label="Startup Name" outlined />
-              <q-input v-model="form.description" label="Description" type="textarea" outlined />
-
-              <!-- Skill Selection -->
-              <div class="q-mb-md">
-                <div class="text-caption q-mb-sm">Required Skills</div>
-                <q-input v-model="skillSearch" outlined dense placeholder="Search skills..." class="q-mb-sm" clearable>
-                  <template v-slot:prepend>
-                    <q-icon name="search" />
-                  </template>
-                </q-input>
-                <div class="q-gutter-sm q-mb-sm" style="max-height: 200px; overflow-y: auto;">
-                  <q-chip v-for="skill in filteredSkills" :key="skill.id" clickable
-                    :color="form.required_skills.includes(skill.id) ? 'primary' : 'grey-4'"
-                    :text-color="form.required_skills.includes(skill.id) ? 'white' : 'dark'"
-                    @click="toggleSkill(skill.id)">
-                    {{ skill.name }}
-                    <q-icon v-if="form.required_skills.includes(skill.id)" name="check" class="q-ml-xs" />
-                  </q-chip>
-                </div>
-              </div>
-
-              <div class="q-mb-md">
-  <div class="text-caption text-weight-medium q-mb-sm">Contact Information</div>
-  <div class="q-gutter-y-sm">
-    <div v-for="(contact, index) in form.contacts" :key="index" class="row items-center no-wrap q-gutter-sm">
-      <q-select
-        v-model="contact.type"
-        :options="contactOptions"
-        outlined
-        dense
-        style="width: 120px; height: 40px"
-        emit-value
-        map-options
-        class="contact-type-select"
+        <!-- Add Startup Dialog -->
+        <q-dialog v-model="showAddDialog" persistent>
+  <q-card :class="{'bg-grey-9': $q.dark.isActive}" style="min-width: 500px; max-width: 600px;">
+    <!-- Header -->
+    <q-card-section class="row items-center q-pb-none">
+      <div class="text-h6 text-weight-bold" :class="{'text-white': $q.dark.isActive}">Add New Startup</div>
+      <q-space />
+      <q-btn 
+        icon="close" 
+        flat 
+        round 
+        dense 
+        v-close-popup 
+        :color="$q.dark.isActive ? 'white' : 'dark'" 
+        @click="resetForm"
       />
-      <q-input
-        v-model="contact.value"
-        outlined
-        dense
-        class="col contact-value-input"
-        style="height: 40px"
-        :rules="contact.type === 'email' ? [val => isValidEmail(val) || 'Invalid email'] : []"
-      />
-      <q-btn
-        icon="remove"
-        round
-        dense
-        flat
-        color="negative"
-        @click="removeContact(index)"
-        v-if="form.contacts.length > 1"
-        style="height: 40px; width: 40px"
-      />
-    </div>
-    <q-btn
-      icon="add"
-      label="Add Contact"
-      dense
-      flat
-      color="primary"
-      @click="addContact"
-      class="q-mt-sm"
-    />
-  </div>
-</div>
     </q-card-section>
 
-            <q-card-actions align="right">
-              <q-btn flat label="Cancel" v-close-popup />
-              <q-btn color="primary" label="Add" @click="submitStartup" />
-            </q-card-actions>
+    <q-separator />
+
+    <!-- Form Content -->
+    <q-card-section class="scroll" style="max-height: 70vh; overflow-y: auto;">
+      <q-form @submit="submitStartup" class="q-gutter-md">
+        <!-- Startup Name -->
+        <q-input 
+          v-model="form.name" 
+          label="Startup Name *" 
+          outlined
+          :dark="$q.dark.isActive"
+          :class="{'bg-grey-8': $q.dark.isActive}"
+          :rules="[val => !!val || 'Field is required']"
+          lazy-rules
+        />
+
+        <!-- Description -->
+        <q-input 
+          v-model="form.description" 
+          label="Description *" 
+          type="textarea" 
+          outlined
+          :dark="$q.dark.isActive"
+          :class="{'bg-grey-8': $q.dark.isActive}"
+          :rules="[val => !!val || 'Field is required']"
+          lazy-rules
+          rows="3"
+        />
+
+        <!-- Skill Selection - Improved -->
+        <div>
+          <div class="text-subtitle2 q-mb-sm" :class="{'text-white': $q.dark.isActive}">Required Skills *</div>
+          <q-input 
+            v-model="skillSearch" 
+            outlined 
+            dense 
+            placeholder="Search skills..." 
+            class="q-mb-sm" 
+            clearable
+            :dark="$q.dark.isActive"
+            :class="{'bg-grey-8': $q.dark.isActive}"
+          >
+            <template v-slot:prepend>
+              <q-icon name="search" :color="$q.dark.isActive ? 'primary' : 'dark'" />
+            </template>
+          </q-input>
+          
+          <div 
+            class="q-gutter-sm q-mb-sm" 
+            style="max-height: 150px; overflow-y: auto;"
+            :class="{'border-grey': !$q.dark.isActive, 'border-dark': $q.dark.isActive, 'rounded-borders': true}"
+          >
+            <q-chip 
+              v-for="skill in filteredSkills" 
+              :key="skill.id" 
+              clickable
+              :color="form.required_skills.includes(skill.id) ? 'primary' : ($q.dark.isActive ? 'grey-7' : 'grey-4')"
+              :text-color="form.required_skills.includes(skill.id) ? 'white' : ($q.dark.isActive ? 'white' : 'dark')"
+              @click="toggleSkill(skill.id)"
+              class="q-ma-xs"
+            >
+              {{ skill.name }}
+              <q-icon v-if="form.required_skills.includes(skill.id)" name="check" class="q-ml-xs" />
+            </q-chip>
+          </div>
+          <div v-if="form.required_skills.length === 0" class="text-caption text-negative">
+            Please select at least one skill
+          </div>
+        </div>
+
+        <!-- Contact Information - Improved -->
+        <div>
+          <div class="text-subtitle2 text-weight-medium q-mb-sm" :class="{'text-white': $q.dark.isActive}">
+            Contact Information *
+          </div>
+          
+          <div 
+            class="q-gutter-y-md"
+            :class="{'border-grey': !$q.dark.isActive, 'border-dark': $q.dark.isActive, 'rounded-borders': true, 'q-pa-sm': true}"
+          >
+            <div v-for="(contact, index) in form.contacts" :key="index" class="row items-center no-wrap q-gutter-sm">
+              <q-select
+                v-model="contact.type"
+                :options="contactOptions"
+                outlined
+                dense
+                style="min-width: 120px;"
+                :dark="$q.dark.isActive"
+                :class="{'bg-grey-8': $q.dark.isActive}"
+                :rules="[val => !!val || 'Required']"
+                lazy-rules
+              />
+              <q-input
+                v-model="contact.value"
+                outlined
+                dense
+                class="col"
+                :dark="$q.dark.isActive"
+                :class="{'bg-grey-8': $q.dark.isActive}"
+                :rules="[
+                  val => !!val || 'Required',
+                  val => contact.type !== 'email' || isValidEmail(val) || 'Invalid email'
+                ]"
+                lazy-rules
+              />
+              <q-btn
+                icon="remove"
+                round
+                dense
+                flat
+                :color="$q.dark.isActive ? 'white' : 'dark'"
+                @click="removeContact(index)"
+                v-if="form.contacts.length > 1"
+              />
+            </div>
+            
+            <q-btn
+              icon="add"
+              label="Add Contact"
+              dense
+              flat
+              color="primary"
+              @click="addContact"
+              class="full-width"
+            />
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <q-card-actions align="right" class="q-px-none">
+          <q-btn 
+            flat 
+            label="Cancel" 
+            :color="$q.dark.isActive ? 'white' : 'dark'" 
+            v-close-popup 
+            @click="resetForm"
+          />
+          <q-btn 
+            color="primary" 
+            label="Add Startup" 
+            type="submit"
+            :disable="form.required_skills.length === 0"
+          />
+        </q-card-actions>
+      </q-form>
+    </q-card-section>
+  </q-card>
+</q-dialog>
+
+        <!-- Startup Details Dialog -->
+        <q-dialog v-model="showDetailsDialog" persistent>
+          <q-card :class="{'bg-grey-9': $q.dark.isActive}" style="width: 800px; max-width: 95vw;">
+            <q-card-section class="row items-center q-pb-none">
+              <div class="text-h5 text-weight-bold" :class="{'text-white': $q.dark.isActive}">{{ selectedStartup.name }}</div>
+              <q-space />
+              <q-btn icon="close" flat round dense v-close-popup :color="$q.dark.isActive ? 'white' : 'dark'" />
+              <q-btn 
+                v-if="isCurrentUserFounder" 
+                icon="delete" 
+                color="negative" 
+                flat round 
+                @click="confirmDeleteStartup" 
+              />
+            </q-card-section>
+
+            <q-separator spaced/>
+
+            <q-card-section class="q-pt-md">
+              <div class="row q-col-gutter-lg">
+                <!-- Left Column (Description & Skills) -->
+                <div class="col-12 col-md-7">
+                  <q-card flat bordered :class="{'bg-grey-8': $q.dark.isActive}">
+                    <q-card-section>
+                      <div class="text-subtitle1 text-weight-bold q-mb-sm" :class="{'text-white': $q.dark.isActive}">Description</div>
+                      <p class="text-body1 q-mt-sm" :class="{'text-white': $q.dark.isActive}">{{ selectedStartup.description }}</p>
+                    </q-card-section>
+
+                    <q-card-section>
+                      <div class="text-subtitle1 text-weight-bold q-mt-lg q-mb-sm" :class="{'text-white': $q.dark.isActive}">Required Skills</div>
+                      <div class="q-gutter-sm q-mb-sm">
+                        <q-chip 
+                          v-for="skill in selectedStartupSkills" 
+                          :key="skill.id"
+                          color="primary" 
+                          text-color="white"
+                          icon="code"
+                          class="q-mb-xs"
+                        >
+                          {{ skill.name }}
+                        </q-chip>
+                      </div>
+                    </q-card-section>
+                  </q-card>
+                </div>
+
+                <!-- Right Column (Info & Actions) -->
+                <div class="col-12 col-md-5">
+                  <q-card flat bordered :class="{'bg-grey-8': $q.dark.isActive}">
+                    <q-list bordered class="rounded-borders">
+                      <q-item :class="{'bg-grey-7': $q.dark.isActive}">
+                        <q-item-section avatar>
+                          <q-icon name="event" color="primary" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label :class="{'text-white': $q.dark.isActive}">Founded</q-item-label>
+                          <q-item-label caption :class="{'text-grey-4': $q.dark.isActive}">{{ formatDate(selectedStartup.created_at) }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <q-separator />
+
+                      <q-item :class="{'bg-grey-7': $q.dark.isActive}">
+                        <q-item-section avatar>
+                          <q-icon name="people" color="primary" />
+                        </q-item-section>
+                        <q-item-section>
+                          <q-item-label :class="{'text-white': $q.dark.isActive}">Members</q-item-label>
+                          <q-item-label caption :class="{'text-grey-4': $q.dark.isActive}">{{ selectedStartup.members_count || 0 }}</q-item-label>
+                        </q-item-section>
+                      </q-item>
+
+                      <q-separator />
+
+                      <template v-for="(contact, index) in parsedContacts" :key="`${index}-${contact.type}`">
+                        <q-item :class="{'bg-grey-7': $q.dark.isActive}">
+                          <q-item-section avatar>
+                            <q-icon :name="getContactIcon(contact.type)" color="primary" />
+                          </q-item-section>
+                          <q-item-section>
+                            <q-item-label :class="{'text-white': $q.dark.isActive}">{{ getContactLabel(contact.type) }}</q-item-label>
+                            <q-item-label caption :class="{'text-grey-4': $q.dark.isActive}">
+                              <a v-if="contact.type === 'email'" :href="`mailto:${contact.value}`" class="text-primary">{{ contact.value }}</a>
+                              <a v-else-if="contact.type === 'phone'" :href="`tel:${contact.value}`" class="text-primary">{{ contact.value }}</a>
+                              <span v-else>{{ contact.value }}</span>
+                            </q-item-label>
+                          </q-item-section>
+                        </q-item>
+                        <q-separator v-if="index < parsedContacts.length - 1" />
+                      </template>
+                    </q-list>
+
+                    <q-card-actions vertical class="q-mt-md">
+                      <q-btn 
+                        color="primary" 
+                        label="Join Startup" 
+                        @click="joinStartup" 
+                        class="q-mb-sm"
+                        no-caps
+                      />
+                    </q-card-actions>
+                  </q-card>
+                </div>
+              </div>
+            </q-card-section>
           </q-card>
         </q-dialog>
 
-        <!-- ==================== -->
-        <!-- STARTUP DETAILS DIALOG -->
-        <!-- ==================== -->
-        <q-dialog v-model="showDetailsDialog" persistent>
-  <q-card style="width: 800px; max-width: 95vw;">
-    <q-card-section class="row items-center q-pb-none">
-      <div class="text-h5">{{ selectedStartup.name }}</div>
-      <q-space />
-      <q-btn icon="close" flat round dense v-close-popup />
-      <q-btn 
-        v-if="isCurrentUserFounder" 
-        icon="delete" 
-        color="negative" 
-        flat round 
-        @click="confirmDeleteStartup" 
-      />
-    </q-card-section>
-
-    <q-separator spaced/>
-
-    <q-card-section class="q-pt-md">
-      <div class="row q-col-gutter-lg">
-        <!-- Left Column (Description & Skills) -->
-        <div class="col-12 col-md-7">
-          <q-card flat bordered>
-            <q-card-section>
-              <div class="text-subtitle1">Description</div>
-              <p class="text-body1 q-mt-sm">{{ selectedStartup.description }}</p>
+        <!-- Search Results Dialog -->
+        <q-dialog v-model="showSearchResults" persistent>
+          <q-card :class="{'bg-grey-9': $q.dark.isActive}" style="width: 800px; max-width: 95vw;">
+            <q-card-section class="row items-center q-pb-none">
+              <div class="text-h5 text-weight-bold" :class="{'text-white': $q.dark.isActive}">Search Results</div>
+              <q-space />
+              <q-btn icon="close" flat round dense v-close-popup :color="$q.dark.isActive ? 'white' : 'dark'" />
             </q-card-section>
 
+            <q-separator spaced/>
+
             <q-card-section>
-              <div class="text-subtitle1 q-mt-md q-mb-sm">Required Skills</div>
-<div class="q-gutter-sm" style="max-height: 120px; overflow-y: auto;">
-  <q-chip 
-    v-for="skill in selectedStartupSkills" 
-    :key="skill.id"
-    color="primary" 
-    text-color="white"
-    icon="code"
-    class="q-mb-xs"
-  >
-    {{ skill.name }}
-  </q-chip>
-</div>
+              <div class="row q-col-gutter-md">
+                <div 
+                  v-for="startup in searchResults" 
+                  :key="startup.id" 
+                  class="col-12 col-sm-6 col-md-4"
+                >
+                  <q-card 
+                    class="my-card text-dark cursor-pointer"
+                    :class="{'bg-dark text-white': $q.dark.isActive}"
+                    :style="`background-color: ${startup.color || ($q.dark.isActive ? '#1e1e1e' : '#ffffff')}`"
+                    flat
+                    bordered
+                    @click="openStartupDetails(startup)"
+                  >
+                    <q-card-section>
+                      <div class="text-h6 text-weight-bold">{{ startup.name }}</div>
+                      <div class="text-subtitle2 q-mt-sm ellipsis-3-lines">
+                        {{ startup.description }}
+                      </div>
+                    </q-card-section>
+
+                    <q-separator />
+
+                    <q-card-section class="q-pt-none">
+                      <div class="row items-center q-gutter-sm">
+                        <q-icon name="schedule" size="sm" :color="$q.dark.isActive ? 'grey-4' : 'grey-7'" />
+                        <span class="text-caption" :class="{'text-grey-4': $q.dark.isActive, 'text-grey-7': !$q.dark.isActive}">
+                          {{ formatDate(startup.created_at) }}
+                        </span>
+                      </div>
+                      <div class="row items-center q-gutter-sm q-mt-sm">
+                        <q-icon name="people" size="sm" :color="$q.dark.isActive ? 'grey-4' : 'grey-7'" />
+                        <span class="text-caption" :class="{'text-grey-4': $q.dark.isActive, 'text-grey-7': !$q.dark.isActive}">
+                          {{ startup.members_count || 0 }} members
+                        </span>
+                      </div>
+                    </q-card-section>
+                  </q-card>
+                </div>
+              </div>
             </q-card-section>
           </q-card>
-        </div>
-
-        <!-- Right Column (Info & Actions) -->
-        <div class="col-12 col-md-5">
-          <q-card flat bordered>
-            <q-card-section>
-              <q-list bordered>
-                <q-item>
-                  <q-item-section avatar>
-                    <q-icon name="event" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>Founded</q-item-label>
-                    <q-item-label caption>{{ formatDate(selectedStartup.created_at) }}</q-item-label>
-                  </q-item-section>
-                </q-item>
-
-                <q-separator />
-
-                <q-item>
-                  <q-item-section avatar>
-                    <q-icon name="people" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>Members</q-item-label>
-                    <q-item-label caption>{{ selectedStartup.members_count || 0 }}</q-item-label>
-                  </q-item-section>
-                </q-item>
-
-                <q-separator />
-
-                <template v-for="(contact, index) in parsedContacts" :key="`${index}-${contact.type}`">
-                  <q-item>
-                    <q-item-section avatar>
-                      <q-icon :name="getContactIcon(contact.type)" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>{{ getContactLabel(contact.type) }}</q-item-label>
-                      <q-item-label caption>
-                        <a v-if="contact.type === 'email'" :href="`mailto:${contact.value}`">{{ contact.value }}</a>
-                        <a v-else-if="contact.type === 'phone'" :href="`tel:${contact.value}`">{{ contact.value }}</a>
-                        <span v-else>{{ contact.value }}</span>
-                      </q-item-label>
-                    </q-item-section>
-                  </q-item>
-                  <q-separator v-if="index < parsedContacts.length - 1" />
-                </template>
-              </q-list>
-            </q-card-section>
-
-            <q-card-actions vertical>
-              <q-btn 
-                color="primary" 
-                label="Join Startup" 
-                @click="joinStartup" 
-                class="q-mb-sm"
-              />
-            </q-card-actions>
-          </q-card>
-        </div>
-      </div>
-    </q-card-section>
-  </q-card>
-</q-dialog>
+        </q-dialog>
       </q-page>
     </q-page-container>
-
-    <q-dialog v-model="showSearchResults" persistent>
-  <q-card style="width: 800px; max-width: 95vw;">
-    <q-card-section class="row items-center q-pb-none">
-      <div class="text-h5">Search Results</div>
-      <q-space />
-      <q-btn icon="close" flat round dense v-close-popup />
-    </q-card-section>
-
-    <q-separator spaced/>
-
-    <q-card-section>
-      <div class="row q-col-gutter-md">
-        <div 
-          v-for="startup in searchResults" 
-          :key="startup.id" 
-          class="col-12 col-sm-6 col-md-4"
-        >
-          <q-card 
-            class="my-card text-dark cursor-pointer"
-            :style="`background-color: ${startup.color || '#ffffff'}`"
-            @click="openStartupDetails(startup)"
-          >
-            <q-card-section>
-              <div class="text-h6 text-weight-bold">{{ startup.name }}</div>
-              <div class="text-subtitle2 q-mt-sm ellipsis-3-lines">
-                {{ startup.description }}
-              </div>
-            </q-card-section>
-
-            <q-separator />
-
-            <q-card-section class="q-pt-none">
-              <div class="row items-center q-gutter-sm">
-                <q-icon name="schedule" size="sm" />
-                <span class="text-caption">{{ formatDate(startup.created_at) }}</span>
-              </div>
-              <div class="row items-center q-gutter-sm q-mt-sm">
-                <q-icon name="people" size="sm" />
-                <span class="text-caption">{{ startup.members_count || 0 }} members</span>
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
-      </div>
-    </q-card-section>
-  </q-card>
-</q-dialog>
 
     <!-- ==================== -->
     <!-- FOOTER SECTION -->
     <!-- ==================== -->
     <q-footer class="bg-grey-9 text-white text-center q-pa-md">
-      © 2024 Startsy - All Rights Reserved
+      <div class="text-caption">
+        © 2024 Startsy - All Rights Reserved
+      </div>
     </q-footer>
   </q-layout>
 </template>
@@ -963,42 +1095,63 @@ const getContactLabel = (type) => {
 /* CARD STYLES */
 /* ==================== */
 .my-card {
-  width: 300px;
-  min-height: 350px;
+  width: 100%;
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 }
 
 .body--dark .my-card {
   border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background-color: #1e1e1e;
 }
 
 .my-card:hover {
-  border-color: var(--q-primary);
   transform: translateY(-5px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-color: var(--q-primary);
 }
 
-.contact-type-select .q-field__control {
+/* Add Startup Card */
+.my-card.bg-grey-1:hover {
+  border-color: var(--q-primary);
+  background-color: rgba(var(--q-primary-rgb), 0.05) !important;
+}
+
+.body--dark .my-card.bg-grey-1 {
+  background-color: #2a2a2a !important;
+}
+
+/* ==================== */
+/* FORM CONTROLS */
+/* ==================== */
+.contact-type-select .q-field__control,
+.contact-value-input .q-field__control,
+.search-field .q-field__control,
+.category-filter .q-field__control {
   height: 40px;
+  border-radius: 8px;
 }
 
-.contact-value-input .q-field__control {
-  height: 40px;
+.body--dark .q-field__control {
+  background-color: #2a2a2a !important;
 }
 
-/* Konsistente Ausrichtung der Elemente */
+/* ==================== */
+/* LAYOUT UTILITIES */
+/* ==================== */
 .row.items-center.no-wrap {
   align-items: center;
 }
 
-/* Fix für den Select-Text */
+/* Fix select text alignment */
 .q-select .q-field__native span {
   line-height: 1;
   padding-top: 2px;
@@ -1014,18 +1167,8 @@ const getContactLabel = (type) => {
   min-height: 4.5em;
 }
 
-
-
-/* Responsive adjustments */
-@media (max-width: 600px) {
-  .my-card {
-    width: 100%;
-    max-width: 350px;
-  }
-}
-
 /* ==================== */
-/* DESCRIPTION SCROLL */
+/* SCROLLABLE CONTENT */
 /* ==================== */
 .description-scroll {
   max-height: 200px;
@@ -1033,20 +1176,7 @@ const getContactLabel = (type) => {
   padding-right: 8px;
 }
 
-/* ==================== */
-/* SKILL CHIPS */
-/* ==================== */
-.q-chip {
-  transition: all 0.2s ease;
-}
-.q-chip:hover {
-  transform: scale(1.05);
-}
-
-.q-select .q-item {
-  text-transform: capitalize;
-}
-
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -1065,15 +1195,44 @@ const getContactLabel = (type) => {
   background: #555;
 }
 
+.body--dark ::-webkit-scrollbar-track {
+  background: #2e2e2e;
+}
+
+.body--dark ::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+/* ==================== */
+/* SKILL CHIPS */
+/* ==================== */
+.q-chip {
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.q-chip:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.body--dark .q-chip:not(.bg-primary) {
+  background-color: #333 !important;
+  color: white !important;
+}
+
+/* ==================== */
+/* SEARCH & FILTER */
+/* ==================== */
 .search-field {
-  width: 200px;
+  width: 220px;
   transition: width 0.3s ease;
 }
 
 .search-field .q-field__control {
-  height: 40px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 20px;
+  transition: all 0.3s ease;
 }
 
 .search-field .q-field__native {
@@ -1082,12 +1241,15 @@ const getContactLabel = (type) => {
 }
 
 .search-field:focus-within {
-  width: 250px;
+  width: 280px;
 }
 
-/* Kategorie-Filter */
+.search-field:focus-within .q-field__control {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Category filter */
 .category-filter .q-field__control {
-  height: 40px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   color: white;
@@ -1097,16 +1259,53 @@ const getContactLabel = (type) => {
   color: white;
 }
 
-/* Responsive Anpassungen */
+/* ==================== */
+/* DIALOGS */
+/* ==================== */
+.q-dialog__inner .q-card {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.q-dialog__inner .q-card-section {
+  padding: 20px;
+}
+
+.body--dark .q-dialog__inner .q-card {
+  background-color: #1e1e1e;
+}
+
+/* ==================== */
+/* TEXT & TYPOGRAPHY */
+/* ==================== */
+.text-subtitle2 {
+  line-height: 1.4;
+}
+
+.text-caption {
+  font-size: 0.8rem;
+}
+
+.body--dark .text-dark {
+  color: white !important;
+}
+
+/* ==================== */
+/* RESPONSIVE ADJUSTMENTS */
+/* ==================== */
 @media (max-width: 1024px) {
   .search-field {
-    width: 160px;
+    width: 180px;
+  }
+  
+  .search-field:focus-within {
+    width: 220px;
   }
 }
 
 @media (max-width: 768px) {
   .search-field {
-    width: 120px;
+    width: 140px;
   }
   
   .category-filter {
@@ -1114,4 +1313,13 @@ const getContactLabel = (type) => {
   }
 }
 
+@media (max-width: 600px) {
+  .search-field {
+    width: 120px;
+  }
+  
+  .my-card {
+    min-height: 250px;
+  }
+}
 </style>

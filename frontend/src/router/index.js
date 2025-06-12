@@ -27,12 +27,6 @@ const routes = [
     meta: { requiresAuth: true, title: 'My Profile' }
   },
   {
-    path: '/about',
-    name: 'about-us',
-    component: () => import('pages/AboutUsPage.vue'),
-    meta: { title: 'Über Uns' }
-  },
-  {
     path: '/login',
     name: 'login',
     component: () => import('pages/LoginPage.vue'),

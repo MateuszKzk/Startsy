@@ -598,6 +598,28 @@ app.post('/logout', (req, res) => {
   res.json({ message: 'Logged out successfully' });
 });
 
+// Add this to your backend API
+app.get('/api/user/search', authenticateToken, async (req, res) => {
+  const { username } = req.query;
+  
+  if (!username || username.trim().length < 3) {
+    return res.status(400).json({ message: 'Search query must be at least 3 characters' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT id, username, full_name FROM users 
+       WHERE username ILIKE $1 OR full_name ILIKE $1 
+       LIMIT 10`,
+      [`%${username}%`]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Search error:', err);
+    res.status(500).json({ message: 'Search failed' });
+  }
+});
+
 // Get or create conversation between two users
 app.post('/api/conversations', authenticateToken, async (req, res) => {
   const { participantId } = req.body;
