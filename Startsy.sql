@@ -462,7 +462,7 @@ COPY public.conversations (id, created_at, updated_at) FROM stdin;
 4	2025-05-29 14:14:30.174688	2025-05-29 14:14:30.174688
 5	2025-05-29 14:15:17.402139	2025-05-29 14:15:17.402139
 7	2025-05-29 14:59:12.545985	2025-05-29 14:59:12.545985
-6	2025-05-29 14:58:39.435316	2025-05-29 23:07:12.643537
+6	2025-05-29 14:58:39.435316	2025-06-12 22:05:47.088169
 \.
 
 
@@ -485,6 +485,7 @@ COPY public.messages (id, conversation_id, sender_id, content, sent_at, read_at)
 12	6	8	123	2025-05-29 23:03:35.168286	2025-05-29 23:15:20.227696
 13	6	8	123	2025-05-29 23:06:28.373349	2025-05-29 23:15:20.227696
 14	6	8	123	2025-05-29 23:07:12.643537	2025-05-29 23:15:20.227696
+15	6	2	123	2025-06-12 22:05:47.088169	2025-06-12 22:05:53.178896
 \.
 
 
@@ -609,7 +610,8 @@ COPY public.startup_members (startup_id, user_id, joined_at) FROM stdin;
 111	2	2025-04-15 01:17:48.925109
 111	7	2025-04-15 16:14:42.545205
 92	7	2025-04-15 16:14:50.185715
-110	2	2025-05-08 17:24:25.38302
+107	2	2025-06-12 18:04:23.481509
+109	2	2025-06-12 20:36:19.511798
 \.
 
 
@@ -635,9 +637,7 @@ COPY public.startups (id, founder_id, name, description, required_skills, create
 105	2	VRGenius	Virtual reality education	20,21,22	2024-01-30 14:10:00	#e1bee7	[{"type":"email","value":"support@vrgenius.com"}]
 106	2	AgriTech	Farm automation solutions	1,2,3	2024-03-25 09:45:00	#b3e5fc	[{"type":"email","value":"contact@agritech.farm"}]
 107	2	LegalBot	AI legal assistant	4,5,6	2024-04-01 11:30:00	#ffcdd2	[{"type":"email","value":"info@legalbot.ai"}]
-108	2	MindMeld	Collaborative brainstorming tools	7,8,9	2024-04-05 16:20:00	#dcedc8	[{"type":"email","value":"hello@mindmeld.team"}]
 109	2	TradeWind	Global trade analytics	10,11,12	2024-04-10 13:15:00	#f0f4c3	[{"type":"email","value":"support@tradewind.io"}]
-110	2	UrbanGrow	Vertical farming systems	13,14,15	2024-04-15 10:00:00	#ffcc80	[{"type":"email","value":"contact@urbangrow.tech"}]
 111	2	TechFert	Smart Fertilizer Technology	28,80,59,55	2024-01-15 09:30:00	#e3f2fd	[{"type":"email","value":"contact@bytecraft.io"},{"type":"linkedin","value":"bytecraft"}]
 \.
 
@@ -659,8 +659,8 @@ COPY public.user_settings (user_id, dark_mode, created_at, updated_at) FROM stdi
 4	f	2025-04-10 18:06:49.265601+02	2025-04-10 18:06:49.265601+02
 5	f	2025-04-10 21:37:11.066184+02	2025-04-10 21:37:11.066184+02
 6	f	2025-04-10 22:34:31.881925+02	2025-04-10 22:34:31.881925+02
-8	t	2025-05-27 19:47:39.143684+02	2025-05-29 23:15:07.934479+02
-2	t	2025-04-10 21:44:09.663104+02	2025-05-29 23:26:02.313833+02
+8	t	2025-05-27 19:47:39.143684+02	2025-06-12 22:08:31.369476+02
+2	f	2025-04-10 21:44:09.663104+02	2025-06-12 21:56:23.272713+02
 7	t	2025-04-15 16:14:12.716948+02	2025-05-27 19:47:45.044077+02
 \.
 
@@ -677,7 +677,7 @@ COPY public.users (id, username, password_hash, role, full_name, created_at) FRO
 5	34	$2b$10$znlYl0ifPOLE9QqWIVH/YekFQER7ARQxDm9Ue7V.rzyWSpUXNrU6i	Mitstreiter	534	2025-04-10 21:37:11.064211
 6	test123	$2b$10$W9JaZ8XlYQUs7U3ppbkMcux3V.QFp983BxuSjU.sPxD2u48D2RLk2	Mitstreiter	test test	2025-04-10 22:34:31.880959
 7	matik	$2b$10$aCPDfyOCtKzNT.3JGgixJO2Ce/WxGBcRiFsNoKqsUzAZQ2byZxFi2	Mitstreiter	Mateusz Kuzniak	2025-04-15 16:14:12.714641
-8	matik1	$2b$10$lDxq/3sqkoxU6kXw9bYPU.RhSktePEWf7nRxwTGcyKXHUlgpGkDRK	Mitstreiter	dupa dupa	2025-05-27 19:47:39.139108
+8	matik1	$2b$10$lDxq/3sqkoxU6kXw9bYPU.RhSktePEWf7nRxwTGcyKXHUlgpGkDRK	Mitstreiter	Mateusz Kuzniak	2025-05-27 19:47:39.139108
 \.
 
 
@@ -699,7 +699,7 @@ SELECT pg_catalog.setval('public.conversations_id_seq', 7, true);
 -- Name: messages_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.messages_id_seq', 14, true);
+SELECT pg_catalog.setval('public.messages_id_seq', 15, true);
 
 
 --
@@ -720,7 +720,7 @@ SELECT pg_catalog.setval('public.skills_id_seq', 94, true);
 -- Name: startups_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.startups_id_seq', 124, true);
+SELECT pg_catalog.setval('public.startups_id_seq', 126, true);
 
 
 --
